@@ -100,19 +100,33 @@ function setMapTheme(theme) {
 /**
  * Create Custom Pulsing DivIcon
  */
-function createCustomIcon(type, isHighlighted = false) {
+function createCustomIcon(type, isHighlighted = false, frequency = 1) {
     const highlightClass = isHighlighted ? 'highlighted' : '';
+    
+    // Calculate dynamic parameters based on frequency
+    const f = Math.max(1, frequency);
+    const scale = Math.min(0.8 + Math.log10(f) * 1.2, 3.2);
+    const opacity = Math.min(0.3 + Math.log10(f) * 0.3, 0.95);
+    const coreSize = Math.min(8 + Math.log10(f) * 6, 18);
+    
+    // Set custom CSS variables for keyframes and core size
+    const styleString = `
+        --freq-scale: ${scale};
+        --freq-opacity: ${opacity};
+        --freq-core-size: ${coreSize}px;
+    `;
     
     return L.divIcon({
         html: `
-            <div class="custom-pulsing-marker ${highlightClass}">
-                <div class="marker-pulse ${type}"></div>
-                <div class="marker-pin ${type}"></div>
+            <div class="custom-pulsing-marker ${highlightClass}" style="${styleString}">
+                <div class="marker-pulse-ring ring-1 ${type}"></div>
+                <div class="marker-pulse-ring ring-2 ${type}"></div>
+                <div class="marker-core ${type}"></div>
             </div>
         `,
         className: 'custom-marker-container',
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
+        iconSize: [48, 48],
+        iconAnchor: [24, 24]
     });
 }
 
@@ -130,6 +144,14 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
     mapMarkers = {};
     
     if (records.length === 0) return;
+    
+    // Calculate frequencies of each location in current records
+    const locationCounts = {};
+    records.forEach((rec) => {
+        if (rec.location) {
+            locationCounts[rec.location] = (locationCounts[rec.location] || 0) + 1;
+        }
+    });
     
     // 2. Plot Markers
     const validMarkers = [];
@@ -168,11 +190,15 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
 
         
         if (lat && lng) {
+            const frequency = locationCounts[rec.location] || 1;
             // Create L.marker
             const marker = L.marker([lat, lng], {
-                icon: createCustomIcon(type),
+                icon: createCustomIcon(type, false, frequency),
                 title: `${rec.location} - ${rec.food}`
             });
+            
+            // Store frequency on marker object for highlighted toggle
+            marker.recordFrequency = frequency;
             
             // Build rich beautiful popup
             const cleanFood = rec.food.split(/[，,]/)[0].trim().replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "");
@@ -242,8 +268,9 @@ function highlightMapMarker(recordIndex, isHighlighted = true) {
     // Find key in database to get the type
     // Fallback is default restaurant
     const type = marker.options.title.includes("家") ? "home" : "restaurant";
+    const frequency = marker.recordFrequency || 1;
     
-    marker.setIcon(createCustomIcon(type, isHighlighted));
+    marker.setIcon(createCustomIcon(type, isHighlighted, frequency));
     
     if (isHighlighted) {
         // Bring marker to front

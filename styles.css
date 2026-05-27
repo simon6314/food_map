@@ -1089,67 +1089,104 @@ body.dark-mode .leaflet-control-attribution {
 }
 
 .custom-pulsing-marker {
-    background: none;
-    border: none;
+    position: relative;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
-.marker-pin {
-    width: 12px;
-    height: 12px;
+.marker-core {
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     position: absolute;
     z-index: 10;
-    border: 1.5px solid white;
+    border: 1.5px solid rgba(255, 255, 255, 0.95);
+    transition: all 0.3s ease;
 }
 
-.marker-pin.home {
+.marker-core.home {
     background-color: var(--primary);
-    box-shadow: 0 0 4px var(--primary);
+    box-shadow: 0 0 6px var(--primary);
 }
 
-.marker-pin.restaurant, .marker-pin.fallback {
+.marker-core.restaurant, .marker-core.fallback {
     background-color: var(--secondary);
-    box-shadow: 0 0 4px var(--secondary);
+    box-shadow: 0 0 6px var(--secondary);
 }
 
-.marker-pulse {
-    display: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
+.marker-pulse-ring {
     position: absolute;
-    z-index: 1;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
     opacity: 0;
+    z-index: 1;
+    pointer-events: none;
+    box-sizing: border-box;
 }
 
-.marker-pulse.home {
-    background-color: var(--primary);
+.marker-pulse-ring.home {
+    background: radial-gradient(circle, hsla(336, 80%, 58%, 0.45) 0%, hsla(336, 80%, 58%, 0.1) 60%, rgba(255, 255, 255, 0) 100%);
+    border: 1px solid hsla(336, 80%, 58%, 0.4);
 }
 
-.marker-pulse.restaurant, .marker-pulse.fallback {
-    background-color: var(--secondary);
+.marker-pulse-ring.restaurant, .marker-pulse-ring.fallback {
+    background: radial-gradient(circle, hsla(175, 77%, 26%, 0.45) 0%, hsla(175, 77%, 26%, 0.1) 60%, rgba(255, 255, 255, 0) 100%);
+    border: 1px solid hsla(175, 77%, 26%, 0.4);
 }
 
-@keyframes marker-glow {
-    0% { transform: scale(0.3); opacity: 0; }
-    30% { opacity: 0.6; }
-    100% { transform: scale(1.25); opacity: 0; }
+/* In dark mode, make the glow even more fluorescent! */
+body.dark-mode .marker-pulse-ring.home {
+    background: radial-gradient(circle, hsla(336, 90%, 65%, 0.55) 0%, hsla(336, 90%, 65%, 0.12) 60%, rgba(255, 255, 255, 0) 100%);
+    border: 1px solid hsla(336, 90%, 65%, 0.5);
+}
+
+body.dark-mode .marker-pulse-ring.restaurant, 
+body.dark-mode .marker-pulse-ring.fallback {
+    background: radial-gradient(circle, hsla(175, 80%, 40%, 0.55) 0%, hsla(175, 80%, 40%, 0.12) 60%, rgba(255, 255, 255, 0) 100%);
+    border: 1px solid hsla(175, 80%, 40%, 0.5);
+}
+
+/* Continuously expanding ring animations */
+.marker-pulse-ring.ring-1 {
+    animation: ripple-spread 3s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+}
+
+.marker-pulse-ring.ring-2 {
+    animation: ripple-spread 3s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+    animation-delay: 1.5s;
+}
+
+@keyframes ripple-spread {
+    0% {
+        transform: scale(0.15);
+        opacity: 0;
+    }
+    10% {
+        opacity: 0.85;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0;
+    }
 }
 
 /* Highlighted marker animation on card hover / focus */
-.custom-pulsing-marker.highlighted .marker-pin {
-    transform: scale(1.4);
-    box-shadow: 0 0 12px 4px var(--accent) !important;
+.custom-pulsing-marker.highlighted .marker-core {
+    transform: scale(1.6);
     background-color: var(--accent) !important;
+    border-color: #fff !important;
+    box-shadow: 0 0 16px 6px var(--accent) !important;
+    z-index: 12;
 }
 
-.custom-pulsing-marker.highlighted .marker-pulse {
-    display: block;
-    background-color: var(--accent) !important;
-    animation: marker-glow 1.3s infinite ease-out;
+.custom-pulsing-marker.highlighted .marker-pulse-ring {
+    background: radial-gradient(circle, hsla(28, 90%, 55%, 0.55) 0%, hsla(28, 90%, 55%, 0.12) 60%, rgba(255, 255, 255, 0) 100%) !important;
+    border-color: hsla(28, 90%, 55%, 0.5) !important;
+    animation-duration: 2s; /* Faster animation for highlighted marker */
 }
 
 /* ==========================================================================
