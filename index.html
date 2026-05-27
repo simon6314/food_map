@@ -76,60 +76,35 @@
                         </div>
                     </div>
                     
-                    <div class="stat-card">
+                    <div class="stat-card clickable" id="card-stat-locations" title="點擊展開/收合踏足地區清單">
                         <div class="stat-icon-wrapper teal">
                             <i data-lucide="map-pin"></i>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-label">踏足足跡</span>
+                            <span class="stat-label">踏足足跡 <i data-lucide="chevron-down" class="stat-chevron"></i></span>
                             <span id="stat-locations" class="stat-value">0 個地區</span>
                         </div>
                     </div>
 
-                    <div class="stat-card">
+                    <div class="stat-card clickable" id="card-stat-meals" title="點擊展開/收合品嚐美食分析">
                         <div class="stat-icon-wrapper orange">
                             <i data-lucide="utensils"></i>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-label">品嚐美食</span>
+                            <span class="stat-label">品嚐美食 <i data-lucide="chevron-down" class="stat-chevron"></i></span>
                             <span id="stat-meals" class="stat-value">0 次</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- Annual Journey & Food Insights Section -->
-                <div class="insights-container" style="margin-top: 1.2rem;">
-                    <button id="btn-toggle-insights" class="btn-insights-toggle">
-                        <span style="display: flex; align-items: center; gap: 0.5rem;">
-                            <i data-lucide="bar-chart-2"></i>
-                            <span>展開年度足跡與美食分析 📊</span>
-                        </span>
-                        <i data-lucide="chevron-down" class="icon-chevron"></i>
-                    </button>
-                    
-                    <div id="insights-panel" class="insights-panel hidden">
-                        <!-- Navigation tabs for years inside insights -->
-                        <div class="insights-year-tabs" id="insights-year-tabs">
-                            <!-- Injected dynamically -->
-                        </div>
-                        
-                        <div class="insights-grid">
-                            <!-- Visited Districts Column -->
-                            <div class="insights-col">
-                                <h3><i data-lucide="map-pin"></i> 踏足地區統計</h3>
-                                <div id="insights-locations-list" class="insights-tag-list">
-                                    <!-- Injected dynamically -->
-                                </div>
-                            </div>
-                            
-                            <!-- Food Categories Column -->
-                            <div class="insights-col">
-                                <h3><i data-lucide="utensils"></i> 美食類別分析</h3>
-                                <div id="insights-food-list" class="insights-progress-list">
-                                    <!-- Injected dynamically -->
-                                </div>
-                            </div>
-                        </div>
+                <!-- Dynamic Stats Details Panel (Sliding Down) -->
+                <div id="stats-details-container" class="stats-details-panel hidden" style="margin-top: 1.2rem;">
+                    <div class="stats-details-header">
+                        <h4 id="stats-details-title"><i data-lucide="map-pin" style="width:1.1rem;height:1.1rem;color:var(--primary);"></i> 踏足地區清單</h4>
+                        <button id="btn-close-stats-details" class="btn-close-details"><i data-lucide="x"></i></button>
+                    </div>
+                    <div id="stats-details-content" class="stats-details-content">
+                        <!-- Dynamic list items will be injected here -->
                     </div>
                 </div>
             </header>

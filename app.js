@@ -268,8 +268,11 @@ function applyFiltersAndRender(animatePath = false) {
         return isDescending ? timeB - timeA : timeA - timeB;
     });
     
-    // 3. Render Stats counters based on full active database
-    renderStats();
+    // Save filtered records globally for details drawer
+    window.currentFilteredRecords = filtered;
+
+    // 3. Render Stats counters based on filtered records
+    renderStats(filtered);
     
     // 4. Render Cards List in DOM
     renderCardsList(filtered);
@@ -277,8 +280,8 @@ function applyFiltersAndRender(animatePath = false) {
     // 5. Render Map polyline path and markers
     updateMapTrail(filtered, coordsDb, animatePath);
     
-    // 6. Render Annual Insights panel
-    renderAnnualInsights();
+    // 6. Update Stats Details drawer if open
+    updateStatsDetails();
 }
 
 /**
@@ -299,8 +302,10 @@ function parseDate(dateStr) {
 /**
  * Render Header Statistics Dashboard
  */
-function renderStats() {
-    if (activeRecords.length === 0) {
+function renderStats(records) {
+    const targetRecords = records || activeRecords;
+    
+    if (targetRecords.length === 0) {
         document.getElementById('stat-days').innerText = "0 天";
         document.getElementById('stat-locations').innerText = "0 個地區";
         document.getElementById('stat-meals').innerText = "0 次";
@@ -308,14 +313,14 @@ function renderStats() {
     }
     
     // Calculate dates spread
-    const dates = activeRecords.map(r => parseDate(r.date)).sort((a,b) => a-b);
+    const dates = targetRecords.map(r => parseDate(r.date)).sort((a,b) => a-b);
     const firstDate = dates[0];
     const lastDate = dates[dates.length - 1];
     const daysTogether = Math.round((lastDate - firstDate) / (1000 * 60 * 60 * 24)) + 1;
     
     // Calculate unique locations
     const uniqueLocs = new Set();
-    activeRecords.forEach(r => {
+    targetRecords.forEach(r => {
         // Clean up location name (e.g. "竹南家" and "竹南" can be grouped, or keep them exact)
         const cleanLoc = r.location.replace("家", "").trim();
         if (cleanLoc) uniqueLocs.add(cleanLoc);
@@ -324,7 +329,7 @@ function renderStats() {
     // Update elements
     document.getElementById('stat-days').innerText = `${daysTogether} 天`;
     document.getElementById('stat-locations').innerText = `${uniqueLocs.size} 個地區`;
-    document.getElementById('stat-meals').innerText = `${activeRecords.length} 次`;
+    document.getElementById('stat-meals').innerText = `${targetRecords.length} 次`;
 }
 
 /**
@@ -867,7 +872,8 @@ function setupEventListeners() {
         const csvArea = document.getElementById('export-csv-text');
         csvArea.select();
         navigator.clipboard.writeText(csvArea.value);
-        alert("📋 已經成功複製 CSV 內容到您的剪貼簿！\n現在您可以打開 Google Sheet，整段貼上覆蓋即可同步。");
+        // 13. Setup clickable statistics details listeners
+        setupStatsDetails();
     });
 }
 
@@ -995,196 +1001,192 @@ function classifyFoodCategory(location, food) {
     return { name: "地方特色小吃 🥢", icon: "utensils", color: "hsla(175, 77%, 26%, 0.15)", textColor: "hsl(175, 77%, 26%)" };
 }
 
+// Active Details Panel State
+let activeDetailsTab = null; // 'locations', 'meals', or null
+
 /**
- * Render Collapsible Annual Insights Dashboard
+ * Setup Click Listeners for Statistics Cards
  */
-function renderAnnualInsights() {
-    // 1. Setup Toggle Listener if not done
-    const toggleBtn = document.getElementById('btn-toggle-insights');
-    const insightsPanel = document.getElementById('insights-panel');
+function setupStatsDetails() {
+    const cardLocs = document.getElementById('card-stat-locations');
+    const cardMeals = document.getElementById('card-stat-meals');
+    const btnClose = document.getElementById('btn-close-stats-details');
     
-    if (toggleBtn && !toggleBtn.dataset.listener) {
-        toggleBtn.dataset.listener = 'true';
-        toggleBtn.addEventListener('click', () => {
-            const isHidden = insightsPanel.classList.contains('hidden');
-            if (isHidden) {
-                insightsPanel.classList.remove('hidden');
-                toggleBtn.classList.add('active');
-                toggleBtn.querySelector('span span').innerText = '收合年度足跡與美食分析 📊';
-                // Trigger animation by rendering
-                updateInsightsData();
-            } else {
-                insightsPanel.classList.add('hidden');
-                toggleBtn.classList.remove('active');
-                toggleBtn.querySelector('span span').innerText = '展開年度足跡與美食分析 📊';
+    if (cardLocs) {
+        cardLocs.addEventListener('click', () => {
+            toggleStatsDetails('locations');
+        });
+    }
+    
+    if (cardMeals) {
+        cardMeals.addEventListener('click', () => {
+            toggleStatsDetails('meals');
+        });
+    }
+    
+    if (btnClose) {
+        btnClose.addEventListener('click', () => {
+            closeStatsDetails();
+        });
+    }
+}
+
+/**
+ * Toggle Stats Details Panel
+ */
+function toggleStatsDetails(tab) {
+    const cardLocs = document.getElementById('card-stat-locations');
+    const cardMeals = document.getElementById('card-stat-meals');
+    
+    if (activeDetailsTab === tab) {
+        closeStatsDetails();
+    } else {
+        activeDetailsTab = tab;
+        
+        // Highlight active card
+        if (tab === 'locations') {
+            cardLocs.classList.add('active');
+            cardMeals.classList.remove('active');
+        } else {
+            cardLocs.classList.remove('active');
+            cardMeals.classList.add('active');
+        }
+        
+        updateStatsDetails();
+    }
+}
+
+/**
+ * Close Stats Details Panel
+ */
+function closeStatsDetails() {
+    activeDetailsTab = null;
+    const cardLocs = document.getElementById('card-stat-locations');
+    const cardMeals = document.getElementById('card-stat-meals');
+    const container = document.getElementById('stats-details-container');
+    
+    if (cardLocs) cardLocs.classList.remove('active');
+    if (cardMeals) cardMeals.classList.remove('active');
+    if (container) container.classList.add('hidden');
+}
+
+/**
+ * Render Details Content dynamically based on filtered records
+ */
+function updateStatsDetails() {
+    const container = document.getElementById('stats-details-container');
+    const titleEl = document.getElementById('stats-details-title');
+    const contentEl = document.getElementById('stats-details-content');
+    
+    if (!activeDetailsTab) {
+        if (container) container.classList.add('hidden');
+        return;
+    }
+    
+    if (container) container.classList.remove('hidden');
+    
+    const records = window.currentFilteredRecords || activeRecords;
+    const yearLabel = activeYear === 'all' ? '歷年全部' : `${activeYear} 年`;
+    
+    contentEl.innerHTML = '';
+    
+    if (activeDetailsTab === 'locations') {
+        titleEl.innerHTML = `<i data-lucide="map-pin" style="width:1.1rem;height:1.1rem;color:var(--primary);"></i> 踏足地區清單 (${yearLabel})`;
+        
+        if (records.length === 0) {
+            contentEl.innerHTML = '<div style="font-size:0.85rem;color:var(--text-secondary);text-align:center;padding:1rem;">該年度無足跡資料</div>';
+            return;
+        }
+        
+        // Count locations
+        const locCounts = {};
+        records.forEach(rec => {
+            const cleanLoc = rec.location.trim();
+            if (cleanLoc) {
+                locCounts[cleanLoc] = (locCounts[cleanLoc] || 0) + 1;
             }
         });
-    }
-    
-    // 2. If panel is expanded, refresh data dynamically
-    if (insightsPanel && !insightsPanel.classList.contains('hidden')) {
-        updateInsightsData();
-    }
-}
-
-/**
- * Generate year tabs and statistics inside insights
- */
-function updateInsightsData() {
-    // A. Extract all available years from active database
-    const availableYears = new Set();
-    activeRecords.forEach(rec => {
-        const yearStr = rec.date.split('/')[0];
-        if (yearStr && yearStr.length === 2) {
-            availableYears.add('20' + yearStr);
-        }
-    });
-    
-    const sortedYears = Array.from(availableYears).sort().reverse(); // newest year first
-    
-    // B. Render Insights Year Tabs in DOM
-    const tabsContainer = document.getElementById('insights-year-tabs');
-    tabsContainer.innerHTML = '';
-    
-    // Add "All" tab
-    const allTab = document.createElement('button');
-    allTab.className = `insights-tab-pill ${insightsActiveYear === 'all' ? 'active' : ''}`;
-    allTab.innerText = '歷年全部';
-    allTab.addEventListener('click', () => {
-        insightsActiveYear = 'all';
-        updateInsightsData();
-    });
-    tabsContainer.appendChild(allTab);
-    
-    // Add dynamic year tabs
-    sortedYears.forEach(year => {
-        const tab = document.createElement('button');
-        tab.className = `insights-tab-pill ${insightsActiveYear === year ? 'active' : ''}`;
-        tab.innerText = `${year} 年`;
-        tab.addEventListener('click', () => {
-            insightsActiveYear = year;
-            updateInsightsData();
-        });
-        tabsContainer.appendChild(tab);
-    });
-    
-    // C. Filter records based on insights active year
-    const targetRecords = activeRecords.filter(rec => {
-        if (insightsActiveYear === 'all') return true;
-        const yearStr = '20' + rec.date.split('/')[0];
-        return yearStr === insightsActiveYear;
-    });
-    
-    // D. Visited Districts Column Logic
-    renderInsightsLocations(targetRecords);
-    
-    // E. Food Categories Column Logic
-    renderInsightsFood(targetRecords);
-}
-
-/**
- * Render Visited Districts tag list
- */
-function renderInsightsLocations(records) {
-    const container = document.getElementById('insights-locations-list');
-    container.innerHTML = '';
-    
-    if (records.length === 0) {
-        container.innerHTML = '<span style="font-size:0.85rem;color:var(--text-light)">無足跡資料</span>';
-        return;
-    }
-    
-    // Count location occurrences
-    const locCounts = {};
-    records.forEach(rec => {
-        const cleanLoc = rec.location.trim();
-        if (cleanLoc) {
-            locCounts[cleanLoc] = (locCounts[cleanLoc] || 0) + 1;
-        }
-    });
-    
-    // Sort locations by count descending
-    const sortedLocs = Object.keys(locCounts).sort((a,b) => locCounts[b] - locCounts[a]);
-    
-    sortedLocs.forEach(loc => {
-        const count = locCounts[loc];
-        const isHome = loc.includes("家");
-        const homeClass = isHome ? 'home-tag' : '';
-        const iconName = isHome ? 'home' : 'map-pin';
         
-        const tag = document.createElement('span');
-        tag.className = `insights-tag ${homeClass}`;
-        tag.innerHTML = `
-            <i data-lucide="${iconName}" style="width:0.75rem;height:0.75rem;"></i>
-            <span>${loc}</span>
-            <span class="insights-tag-count">${count}次</span>
-        `;
-        container.appendChild(tag);
-    });
-    
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons({
-            attrs: {
-                class: ['lucide']
-            },
-            node: container
-        });
-    }
-}
-
-/**
- * Render Food categories progress bar list
- */
-function renderInsightsFood(records) {
-    const container = document.getElementById('insights-food-list');
-    container.innerHTML = '';
-    
-    if (records.length === 0) {
-        container.innerHTML = '<span style="font-size:0.85rem;color:var(--text-light)">無美食資料</span>';
-        return;
-    }
-    
-    // Categorize and count food occurrences
-    const catCounts = {};
-    const catConfigs = {}; // save color/icon metadata
-    
-    records.forEach(rec => {
-        const cat = classifyFoodCategory(rec.location, rec.food);
-        catCounts[cat.name] = (catCounts[cat.name] || 0) + 1;
-        catConfigs[cat.name] = cat;
-    });
-    
-    // Sort categories by count descending
-    const sortedCats = Object.keys(catCounts).sort((a,b) => catCounts[b] - catCounts[a]);
-    
-    sortedCats.forEach(catName => {
-        const count = catCounts[catName];
-        const percent = Math.round((count / records.length) * 100);
-        const config = catConfigs[catName];
+        const sortedLocs = Object.keys(locCounts).sort((a,b) => locCounts[b] - locCounts[a]);
         
-        const progressContainer = document.createElement('div');
-        progressContainer.className = 'progress-bar-container';
-        progressContainer.innerHTML = `
-            <div class="progress-bar-header">
-                <span class="progress-label" style="color: ${config.textColor}">
-                    <i data-lucide="${config.icon}"></i>
-                    <span>${config.name}</span>
+        const grid = document.createElement('div');
+        grid.className = 'details-grid';
+        
+        sortedLocs.forEach(loc => {
+            const count = locCounts[loc];
+            const isHome = loc.includes("家");
+            const homeClass = isHome ? 'home-tag' : '';
+            const iconName = isHome ? 'home' : 'map-pin';
+            
+            const item = document.createElement('div');
+            item.className = `details-tag ${homeClass}`;
+            item.innerHTML = `
+                <span style="display:flex;align-items:center;gap:0.3rem;">
+                    <i data-lucide="${iconName}" style="width:0.75rem;height:0.75rem;"></i>
+                    <span>${loc}</span>
                 </span>
-                <span class="progress-count">${count} 次 (${percent}%)</span>
-            </div>
-            <div class="progress-track">
-                <div class="progress-fill" style="width: ${percent}%; background-color: ${config.textColor}"></div>
-            </div>
-        `;
-        container.appendChild(progressContainer);
-    });
+                <span class="details-tag-count">${count}次</span>
+            `;
+            grid.appendChild(item);
+        });
+        
+        contentEl.appendChild(grid);
+        
+    } else if (activeDetailsTab === 'meals') {
+        titleEl.innerHTML = `<i data-lucide="utensils" style="width:1.1rem;height:1.1rem;color:var(--primary);"></i> 美食分析清單 (${yearLabel})`;
+        
+        if (records.length === 0) {
+            contentEl.innerHTML = '<div style="font-size:0.85rem;color:var(--text-secondary);text-align:center;padding:1rem;">該年度無美食資料</div>';
+            return;
+        }
+        
+        // A. Food Category counts
+        const catCounts = {};
+        const catConfigs = {};
+        records.forEach(rec => {
+            const cat = classifyFoodCategory(rec.location, rec.food);
+            catCounts[cat.name] = (catCounts[cat.name] || 0) + 1;
+            catConfigs[cat.name] = cat;
+        });
+        
+        const sortedCats = Object.keys(catCounts).sort((a,b) => catCounts[b] - catCounts[a]);
+        
+        const foodGrid = document.createElement('div');
+        foodGrid.className = 'details-food-grid';
+        
+        sortedCats.forEach(catName => {
+            const count = catCounts[catName];
+            const percent = Math.round((count / records.length) * 100);
+            const config = catConfigs[catName];
+            
+            const card = document.createElement('div');
+            card.className = 'details-food-card';
+            card.innerHTML = `
+                <div class="details-food-header">
+                    <span class="details-food-label" style="color: ${config.textColor}">
+                        <i data-lucide="${config.icon}"></i>
+                        <span>${config.name}</span>
+                    </span>
+                    <span class="details-food-count">${count} 次 (${percent}%)</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" style="width: ${percent}%; background-color: ${config.textColor}"></div>
+                </div>
+            `;
+            foodGrid.appendChild(card);
+        });
+        
+        contentEl.appendChild(foodGrid);
+    }
     
     if (typeof lucide !== 'undefined') {
         lucide.createIcons({
-            attrs: {
-                class: ['lucide']
-            },
-            node: container
+            attrs: { class: ['lucide'] },
+            node: contentEl
+        });
+        lucide.createIcons({
+            attrs: { class: ['lucide'] },
+            node: titleEl
         });
     }
 }
