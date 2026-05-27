@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我們的美食足跡 | Our Food Map & Journey</title>
+    
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Leaflet JS Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- Custom Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="light-mode">
+
+    <!-- Premium Animated Background Gradient Blur -->
+    <div class="bg-glow bg-glow-1"></div>
+    <div class="bg-glow bg-glow-2"></div>
+
+    <div class="app-container">
+        
+        <!-- ==================== LEFT COLUMN: MAP PANEL ==================== -->
+        <aside class="map-panel">
+            <div class="map-header">
+                <div class="map-title-group">
+                    <span class="heart-pulse"><i data-lucide="heart" class="heart-icon"></i></span>
+                    <h2>我們的足跡地圖</h2>
+                </div>
+                <div class="map-actions">
+                    <button id="btn-play-trail" class="btn btn-secondary btn-icon" title="播放足跡動畫">
+                        <i data-lucide="play"></i> <span>播放足跡</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Leaflet Interactive Map Container -->
+            <div id="map"></div>
+            
+            <div class="map-footer">
+                <span class="map-legend-item"><span class="legend-dot home-dot"></span> 溫暖的家</span>
+                <span class="map-legend-item"><span class="legend-dot food-dot"></span> 精選美食</span>
+                <span class="map-legend-item"><span class="legend-line"></span> 牽手足跡軌跡</span>
+            </div>
+        </aside>
+
+        <!-- ==================== RIGHT COLUMN: CONTENT PANEL ==================== -->
+        <main class="content-panel">
+            
+            <!-- Romantic Header Section -->
+            <header class="app-header">
+                <div class="header-main">
+                    <div class="title-area">
+                        <h1>我們的美食足跡</h1>
+                        <p class="subtitle font-playfair">Where Love Meets Delicious Journeys</p>
+                    </div>
+                    <div class="theme-toggle-area">
+                        <button id="btn-theme-toggle" class="btn-theme-toggle" title="切換深淺色模式">
+                            <i data-lucide="moon" class="icon-dark"></i>
+                            <i data-lucide="sun" class="icon-light"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards Dashboard -->
+                <div class="stats-dashboard">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper red">
+                            <i data-lucide="calendar"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">攜手相伴</span>
+                            <span id="stat-days" class="stat-value">0 天</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper teal">
+                            <i data-lucide="map-pin"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">踏足足跡</span>
+                            <span id="stat-locations" class="stat-value">0 個地區</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper orange">
+                            <i data-lucide="utensils"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-label">品嚐美食</span>
+                            <span id="stat-meals" class="stat-value">0 次</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Search, Filter & Tabs Section -->
+            <section class="controls-section">
+                <!-- Year Pill Tabs -->
+                <div class="tabs-wrapper">
+                    <div class="year-tabs" role="tablist">
+                        <button class="tab-pill active" data-year="all">全部</button>
+                        <button class="tab-pill" data-year="2026">2026</button>
+                        <button class="tab-pill" data-year="2025">2025</button>
+                        <button class="tab-pill" data-year="2024">2024</button>
+                    </div>
+                </div>
+
+                <!-- Filter Controls Grid -->
+                <div class="filter-controls">
+                    <div class="search-box">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="search-input" placeholder="搜尋美食、餐廳、景點或備註...">
+                        <button id="search-clear" class="btn-clear hidden"><i data-lucide="x"></i></button>
+                    </div>
+                    
+                    <div class="action-buttons-group">
+                        <button id="btn-sort" class="btn btn-secondary btn-icon" title="切換排序">
+                            <i data-lucide="arrow-down-narrow-wide" class="icon-sort-desc"></i>
+                            <i data-lucide="arrow-up-narrow-wide" class="icon-sort-asc hidden"></i>
+                            <span id="sort-text">最新優先</span>
+                        </button>
+                        <button id="btn-open-sync" class="btn btn-secondary btn-icon" title="同步試算表">
+                            <i data-lucide="refresh-cw"></i> <span>同步試算表</span>
+                        </button>
+                        <button id="btn-add-card" class="btn btn-primary btn-icon">
+                            <i data-lucide="plus"></i> <span>新增足跡</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timeline Timeline Timeline -->
+            <section class="timeline-section">
+                <div id="no-results" class="no-results-state hidden">
+                    <i data-lucide="frown" class="no-results-icon"></i>
+                    <h3>找不到符合的足跡...</h3>
+                    <p>試試看其他關鍵字，或是新增一筆足跡吧！</p>
+                </div>
+                
+                <div id="cards-container" class="cards-grid">
+                    <!-- Dynamic timeline cards will be injected here -->
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ==================== DIALOG 1: ADD / EDIT CARD MODAL ==================== -->
+    <div id="modal-card" class="modal-overlay">
+        <div class="modal-card-container">
+            <div class="modal-header">
+                <h3 id="modal-title"><i data-lucide="map-pin" class="modal-icon"></i> 新增美食足跡</h3>
+                <button class="btn-close-modal" id="btn-close-card-modal"><i data-lucide="x"></i></button>
+            </div>
+            <form id="form-card">
+                <input type="hidden" id="form-edit-index" value="">
+                
+                <div class="form-group">
+                    <label for="form-date">時間 <span class="required">*</span></label>
+                    <input type="text" id="form-date" placeholder="格式：YY/MM/DD (例如 26/05/24)" required>
+                    <span class="form-help">請依年份兩碼/月份/日期填寫。</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-location">地點/地區 <span class="required">*</span></label>
+                    <input type="text" id="form-location" list="known-locations" placeholder="例如：竹南家、頭份、高雄" required>
+                    <datalist id="known-locations">
+                        <!-- Filled dynamically -->
+                    </datalist>
+                    <span class="form-help">填寫「竹南家」、「新竹家」等會自動對應到溫馨的家！</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="form-food">餐廳名稱 / 美食細節 <span class="required">*</span></label>
+                    <textarea id="form-food" rows="3" placeholder="例如：陶板屋（精靈生日）、滷間客棧、火雞肉飯，綠豆沙" required></textarea>
+                    <span class="form-help">可多個美食以逗號隔開，亦可加上備註在括號中。</span>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="button" id="btn-cancel-card" class="btn btn-secondary">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存足跡</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ==================== DIALOG 2: SYNC / EXPORT MODAL ==================== -->
+    <div id="modal-sync" class="modal-overlay">
+        <div class="modal-card-container width-wide">
+            <div class="modal-header">
+                <h3><i data-lucide="database" class="modal-icon"></i> Google 試算表同步與匯出</h3>
+                <button class="btn-close-modal" id="btn-close-sync-modal"><i data-lucide="x"></i></button>
+            </div>
+            
+            <div class="sync-modal-body">
+                <!-- Tab Headers -->
+                <div class="sync-tabs">
+                    <button class="sync-tabactive" id="tab-btn-load">📥 匯入 Google 試算表</button>
+                    <button class="" id="tab-btn-export">📤 匯出資料 (貼回試算表)</button>
+                </div>
+                
+                <!-- Tab Panel 1: Load Spreadsheet -->
+                <div class="sync-panel" id="panel-load">
+                    <p>您可以直接連接您的 Google 試算表。當您在 Google 試算表中修改資料時，網頁將會自動更新！</p>
+                    
+                    <div class="alert alert-tip">
+                        <strong>💡 如何取得 CSV 連結：</strong>
+                        在 Google 試算表中，點選「檔案」➔「共用」➔「發布到網路」，選擇「全文件」以及「逗號分隔值 (.csv)」，複製發布的連結貼在下方。
+                    </div>
+                    
+                    <div class="form-group margin-top">
+                        <label for="sheet-url">Google Sheet CSV 唯讀連結：</label>
+                        <input type="text" id="sheet-url" placeholder="https://docs.google.com/spreadsheets/d/.../export?format=csv">
+                    </div>
+                    
+                    <div class="form-group margin-top">
+                        <label for="gas-url" style="color: var(--primary); font-weight:700;">❤️ Google Apps Script API 網址 (支援手機端即時寫入與同步)：</label>
+                        <input type="text" id="gas-url" placeholder="https://script.google.com/macros/s/.../exec">
+                        <span class="form-help">設定此網址後，手機端新增足跡會【直接即時寫入】您的 Google 試算表，地圖也會自動即時更新！</span>
+                    </div>
+                    
+                    <div class="sync-actions">
+                        <button id="btn-reset-sheet" class="btn btn-secondary">恢復預設</button>
+                        <button id="btn-save-sheet" class="btn btn-primary">儲存並重新同步</button>
+                    </div>
+                </div>
+                
+                <!-- Tab Panel 2: Export Local Overrides -->
+                <div class="sync-panel hidden" id="panel-export">
+                    <p>如果您在網頁上做了新增、修改或刪除，請將下方的 CSV 內容**整段複製**並貼回您的 Google 試算表中，即可完成同步！</p>
+                    
+                    <div class="form-group">
+                        <label for="export-csv-text">CSV 格式資料（第一行是欄位標題）：</label>
+                        <textarea id="export-csv-text" readonly rows="8" class="code-font"></textarea>
+                    </div>
+                    
+                    <div class="sync-actions">
+                        <button id="btn-download-csv" class="btn btn-secondary btn-icon">
+                            <i data-lucide="download"></i> 下載 CSV 檔案
+                        </button>
+                        <button id="btn-copy-csv" class="btn btn-primary btn-icon">
+                            <i data-lucide="copy"></i> 複製 CSV 內容
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS Map Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    
+    <!-- Custom Web App Logic Scripts -->
+    <script src="map.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
