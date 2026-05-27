@@ -175,7 +175,7 @@ function parseCSV(text) {
     
     for (let idx = 1; idx < lines.length; idx++) {
         const line = lines[idx];
-        if (line.length < headers.length || !line[0].trim()) continue;
+        if (line.length < 3 || !line[0].trim()) continue;
         
         const record = {};
         headers.forEach((header, colIdx) => {
@@ -186,7 +186,7 @@ function parseCSV(text) {
             else if (header === '緯度' || header.toLowerCase() === 'latitude' || header.toLowerCase() === 'lat') fieldName = 'lat';
             else if (header === '經度' || header.toLowerCase() === 'longitude' || header.toLowerCase() === 'lng' || header.toLowerCase() === 'lon') fieldName = 'lng';
             
-            record[fieldName] = line[colIdx].trim();
+            record[fieldName] = line[colIdx] ? line[colIdx].trim() : '';
         });
         
         // Add index for state tracking
@@ -365,26 +365,6 @@ function renderCardsList(records) {
         const addressText = coord && coord.address ? 
             `<div class="card-address"><i data-lucide="compass"></i> <span>${coord.address}</span></div>` : '';
             
-        // Find coordinates for display and source
-        let displayLat = '';
-        let displayLng = '';
-        let coordSource = '';
-        
-        if (rec.lat && rec.lng) {
-            displayLat = parseFloat(rec.lat).toFixed(6);
-            displayLng = parseFloat(rec.lng).toFixed(6);
-            coordSource = '試算表直接定位';
-        } else if (coord && coord.lat && coord.lng) {
-            displayLat = coord.lat.toFixed(6);
-            displayLng = coord.lng.toFixed(6);
-            coordSource = coord.type === 'home' ? '家定位' : '資料庫對應';
-        }
-        
-        let coordsBadge = '';
-        if (displayLat && displayLng) {
-            coordsBadge = `<span class="coords-badge" title="經緯度來源: ${coordSource}"><i data-lucide="compass"></i> <span>${displayLat}, ${displayLng}</span></span>`;
-        }
-        
         // Build card HTML
         const card = document.createElement('div');
         card.className = 'food-card';
@@ -396,7 +376,6 @@ function renderCardsList(records) {
                     <span class="location-tag ${homeClass}">
                         ${homeIcon} <span>${rec.location}</span>
                     </span>
-                    ${coordsBadge}
                 </div>
             </div>
             <div class="card-content">
