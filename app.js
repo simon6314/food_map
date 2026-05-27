@@ -30,6 +30,11 @@ const STORAGE_COORDS_OVERRIDES_KEY = 'food_map_coords_overrides';
 const DEFAULT_CSV_PATH = 'https://docs.google.com/spreadsheets/d/1Kxl_tLb3vDVVk4AAAW4n7qm_OWE5d9YCU6AMttpnAvQ/export?format=csv';
 const DEFAULT_COORDS_PATH = 'coords_db.json';
 
+// Hardcoded Google Apps Script Web App API URL (for phone-to-sheet sync)
+// 請在此填入您的 Google Apps Script 網頁應用程式網址，格式為：https://script.google.com/macros/s/xxxx/exec
+const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycbxzj9GLRhG0nfx5c_Smewdz4FiOpfdzyQE6GOi5Yh5y1-uE0JCIUh4PLceAeliygiQO/exec';
+
+
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Initialize Leaflet Map
@@ -81,8 +86,11 @@ async function loadCoordsDb() {
  * Main Data Loader and Renderer
  */
 async function loadDataAndRender() {
-    // 1. Get Google Sheets Apps Script URL or Published URL or fallback to local file
-    const customGasUrl = localStorage.getItem(STORAGE_GAS_URL_KEY);
+    // 1. Get Google Sheets Apps Script URL (hardcoded has priority, fallback to local storage)
+    const customGasUrl = (HARDCODED_GAS_URL && HARDCODED_GAS_URL !== '您的_GOOGLE_APPS_SCRIPT_API_網址') 
+        ? HARDCODED_GAS_URL 
+        : (localStorage.getItem(STORAGE_GAS_URL_KEY) || '');
+        
     const customSheetUrl = localStorage.getItem(STORAGE_SHEET_URL_KEY);
     
     // 2. Load LocalStorage Overrides
@@ -721,7 +729,9 @@ function setupEventListeners() {
         }
 
         
-        const customGasUrl = localStorage.getItem(STORAGE_GAS_URL_KEY);
+        const customGasUrl = (HARDCODED_GAS_URL && HARDCODED_GAS_URL !== '您的_GOOGLE_APPS_SCRIPT_API_網址') 
+            ? HARDCODED_GAS_URL 
+            : (localStorage.getItem(STORAGE_GAS_URL_KEY) || '');
         
         // If we have Apps Script URL, sync to Google Sheet (either ADD or EDIT of a base record)
         if (customGasUrl && (!recordIndex || !recordIndex.startsWith('added-'))) {
@@ -774,6 +784,10 @@ function setupEventListeners() {
             }
         }
         
+        if (!customGasUrl) {
+            alert("⚠️ 溫馨提示：您尚未在右上角 ⚙️「同步試算表」中設定 Google Apps Script API 網址，因此此筆足跡【目前僅儲存在您這台手機/電腦的本機網頁快取中】，尚未同步寫入您的 Google 試算表！\n\n如需即時同步寫入試算表，請部署並設定您的 API 網址！");
+        }
+        
         if (recordIndex) {
             // EDIT Mode (fallback local storage)
             if (recordIndex.startsWith('added-')) {
@@ -792,15 +806,9 @@ function setupEventListeners() {
         document.getElementById('modal-card').classList.remove('active');
     });
     
-    // 8. Sync Spreadsheet Dialog Trigger
+    // 8. Backup & Export Spreadsheet Dialog Trigger
     document.getElementById('btn-open-sync').addEventListener('click', () => {
         const modal = document.getElementById('modal-sync');
-        
-        // Pre-fill sheet and GAS URL inputs
-        const savedSheetUrl = localStorage.getItem(STORAGE_SHEET_URL_KEY) || '';
-        const savedGasUrl = localStorage.getItem(STORAGE_GAS_URL_KEY) || '';
-        document.getElementById('sheet-url').value = savedSheetUrl;
-        document.getElementById('gas-url').value = savedGasUrl;
         
         // Generate Export CSV Text Block
         generateExportCSVText();
@@ -810,59 +818,6 @@ function setupEventListeners() {
     
     document.getElementById('btn-close-sync-modal').addEventListener('click', () => {
         document.getElementById('modal-sync').classList.remove('active');
-    });
-    
-    // 9. Sync Tabs switcher
-    const tabLoad = document.getElementById('tab-btn-load');
-    const tabExport = document.getElementById('tab-btn-export');
-    const panelLoad = document.getElementById('panel-load');
-    const panelExport = document.getElementById('panel-export');
-    
-    tabLoad.addEventListener('click', () => {
-        tabLoad.classList.add('sync-tabactive');
-        tabExport.classList.remove('sync-tabactive');
-        panelLoad.classList.remove('hidden');
-        panelExport.classList.add('hidden');
-    });
-    
-    tabExport.addEventListener('click', () => {
-        tabExport.classList.add('sync-tabactive');
-        tabLoad.classList.remove('sync-tabactive');
-        panelExport.classList.remove('hidden');
-        panelLoad.classList.add('hidden');
-        
-        // Re-generate CSV text block
-        generateExportCSVText();
-    });
-    
-    // 10. Save custom sheet URL
-    document.getElementById('btn-save-sheet').addEventListener('click', () => {
-        const sheetUrl = document.getElementById('sheet-url').value.trim();
-        const gasUrl = document.getElementById('gas-url').value.trim();
-        
-        if (sheetUrl) {
-            localStorage.setItem(STORAGE_SHEET_URL_KEY, sheetUrl);
-        } else {
-            localStorage.removeItem(STORAGE_SHEET_URL_KEY);
-        }
-        
-        if (gasUrl) {
-            localStorage.setItem(STORAGE_GAS_URL_KEY, gasUrl);
-        } else {
-            localStorage.removeItem(STORAGE_GAS_URL_KEY);
-        }
-        
-        document.getElementById('modal-sync').classList.remove('active');
-        loadDataAndRender(); // reload with new source
-    });
-    
-    document.getElementById('btn-reset-sheet').addEventListener('click', () => {
-        localStorage.removeItem(STORAGE_SHEET_URL_KEY);
-        localStorage.removeItem(STORAGE_GAS_URL_KEY);
-        document.getElementById('sheet-url').value = '';
-        document.getElementById('gas-url').value = '';
-        document.getElementById('modal-sync').classList.remove('active');
-        loadDataAndRender();
     });
     
     // 11. Download updated CSV locally
