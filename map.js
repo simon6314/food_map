@@ -93,40 +93,25 @@ function createCustomIcon(type, isHighlighted = false) {
     });
 }
 
-/**
- * Render Markers and Connected Polyline Trail
+/*/**
+ * Render Markers on Map
  * @param {Array} records - Filtered and sorted records
  * @param {Object} coordsDb - Coordinates database lookup
- * @param {Boolean} animatePath - Whether to draw the trail step-by-step
+ * @param {Boolean} animatePath - Unused parameter after path lines removal
  */
 function updateMapTrail(records, coordsDb, animatePath = true) {
     if (!map || !markersLayer) return;
     
-    // 1. Clear previous layers and lines
+    // 1. Clear previous layers
     markersLayer.clearLayers();
     mapMarkers = {};
     
-    if (pathPolyline) {
-        map.removeLayer(pathPolyline);
-        pathPolyline = null;
-    }
-    if (pathGlowPolyline) {
-        map.removeLayer(pathGlowPolyline);
-        pathGlowPolyline = null;
-    }
-    
     if (records.length === 0) return;
     
-    // 2. Plot Markers and Collect Path Coordinates
-    const pathCoordinates = [];
+    // 2. Plot Markers
     const validMarkers = [];
     
-    // Sort records chronologically (oldest first) to build the correct journey line
-    const chronologicalRecords = [...records].sort((a, b) => {
-        return parseDateString(a.date) - parseDateString(b.date);
-    });
-    
-    chronologicalRecords.forEach((rec) => {
+    records.forEach((rec) => {
         const key = `${rec.location}|${rec.food}`;
         const coord = coordsDb[key];
         
@@ -134,13 +119,6 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
             const lat = coord.lat;
             const lng = coord.lng;
             const type = coord.type || 'restaurant';
-            
-            // Avoid duplicate marker coordinates in path array to prevent line overlapping glitches
-            if (pathCoordinates.length === 0 || 
-                pathCoordinates[pathCoordinates.length - 1][0] !== lat || 
-                pathCoordinates[pathCoordinates.length - 1][1] !== lng) {
-                pathCoordinates.push([lat, lng]);
-            }
             
             // Create L.marker
             const marker = L.marker([lat, lng], {
@@ -194,18 +172,7 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
         }
     });
     
-    // 3. Draw and Animate Polyline Trail
-    if (pathCoordinates.length > 1) {
-        if (animatePath) {
-            // Draw path segment-by-segment for a beautiful animated tracing effect
-            animatePolylineTrail(pathCoordinates);
-        } else {
-            // Static instantaneous drawing
-            drawStaticTrail(pathCoordinates);
-        }
-    }
-    
-    // 4. Fly and Auto-Zoom to Fit Markers
+    // 3. Fly and Auto-Zoom to Fit Markers
     if (validMarkers.length > 0) {
         const bounds = markersLayer.getBounds();
         map.flyToBounds(bounds, {
@@ -271,68 +238,4 @@ function parseDateString(dateStr) {
         return new Date(year, month, day);
     }
     return new Date(dateStr);
-}
-
-/**
- * Draw static instant lines
- */
-function drawStaticTrail(coords) {
-    // 1. Underlay Glow Line
-    pathGlowPolyline = L.polyline(coords, {
-        color: 'var(--primary)',
-        weight: 9,
-        opacity: 0.25,
-        lineJoin: 'round'
-    }).addTo(map);
-    
-    // 2. Foreground Solid Line
-    pathPolyline = L.polyline(coords, {
-        color: 'var(--primary)',
-        weight: 3.5,
-        opacity: 0.85,
-        lineJoin: 'round',
-        dashArray: '2, 6' // Elegant dotted effect
-    }).addTo(map);
-}
-
-/**
- * Animate the Polyline Step-by-Step (Heartbeat path tracing)
- */
-function animatePolylineTrail(coords) {
-    let currentStep = 0;
-    const animatedCoords = [coords[0]];
-    
-    // Draw initial empty polyline placeholders
-    pathGlowPolyline = L.polyline(animatedCoords, {
-        color: 'var(--primary)',
-        weight: 9,
-        opacity: 0.25,
-        lineJoin: 'round'
-    }).addTo(map);
-    
-    pathPolyline = L.polyline(animatedCoords, {
-        color: 'var(--primary)',
-        weight: 3.5,
-        opacity: 0.85,
-        lineJoin: 'round',
-        dashArray: '2, 6'
-    }).addTo(map);
-    
-    const stepDelay = Math.max(30, Math.min(150, 2000 / coords.length)); // Adaptive speed based on points count
-    
-    function drawNextSegment() {
-        if (currentStep < coords.length - 1) {
-            currentStep++;
-            animatedCoords.push(coords[currentStep]);
-            
-            // Redraw line vectors
-            pathGlowPolyline.setLatLngs(animatedCoords);
-            pathPolyline.setLatLngs(animatedCoords);
-            
-            setTimeout(drawNextSegment, stepDelay);
-        }
-    }
-    
-    // Start delay
-    setTimeout(drawNextSegment, 500);
 }

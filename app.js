@@ -820,11 +820,6 @@ function setupEventListeners() {
         navigator.clipboard.writeText(csvArea.value);
         alert("📋 已經成功複製 CSV 內容到您的剪貼簿！\n現在您可以打開 Google Sheet，整段貼上覆蓋即可同步。");
     });
-    
-    // 13. Replay trail path animation
-    document.getElementById('btn-play-trail').addEventListener('click', () => {
-        applyFiltersAndRender(true); // force redraw line trail with drawing animation
-    });
 }
 
 /**
