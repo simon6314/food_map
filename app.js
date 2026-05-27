@@ -22,6 +22,7 @@ let isDescending = true; // Default: newest first
 const STORAGE_SHEET_URL_KEY = 'food_map_sheet_url';
 const STORAGE_GAS_URL_KEY = 'food_map_gas_url';
 const STORAGE_OVERRIDES_KEY = 'food_map_overrides';
+const STORAGE_COORDS_OVERRIDES_KEY = 'food_map_coords_overrides';
 
 // Default CSV path (local file in workspace)
 const DEFAULT_CSV_PATH = 'food_map_adjusted.csv';
@@ -56,6 +57,18 @@ async function loadCoordsDb() {
     try {
         const response = await fetch(DEFAULT_COORDS_PATH);
         coordsDb = await response.json();
+        
+        // Merge with local coordinates overrides
+        const savedCoords = localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY);
+        if (savedCoords) {
+            try {
+                const overrides = JSON.parse(savedCoords);
+                coordsDb = { ...coordsDb, ...overrides };
+                console.log(`Loaded ${Object.keys(overrides).length} custom coordinate overrides.`);
+            } catch (err) {
+                console.error("Failed to parse custom coordinates overrides:", err);
+            }
+        }
         console.log(`Loaded coordinates database with ${Object.keys(coordsDb).length} locations.`);
     } catch (e) {
         console.error("Failed to load coordinates database:", e);
@@ -480,6 +493,15 @@ window.openEditModal = function(recordIndex) {
             document.getElementById('form-date').value = rec.date;
             document.getElementById('form-location').value = rec.location;
             document.getElementById('form-food').value = rec.food;
+            
+            // Pre-fill custom coordinates if they exist in coordsDb
+            const key = `${rec.location}|${rec.food}`;
+            const coord = coordsDb[key];
+            if (coord && coord.lat && coord.lng) {
+                document.getElementById('form-coords').value = `${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}`;
+            } else {
+                document.getElementById('form-coords').value = '';
+            }
         }
     } else {
         // Add mode
@@ -491,6 +513,7 @@ window.openEditModal = function(recordIndex) {
         const mm = String(today.getMonth() + 1).padStart(2, '0');
         const dd = String(today.getDate()).padStart(2, '0');
         document.getElementById('form-date').value = `${yy}/${mm}/${dd}`;
+        document.getElementById('form-coords').value = '';
     }
     
     modal.classList.add('active');
@@ -614,8 +637,35 @@ function setupEventListeners() {
         // Simple validation check
         if (!newRec.date || !newRec.location || !newRec.food) return;
         
-        // Geocode coordinates on save if we don't have them in our local DB
-        saveNewCoordsIfMissing(newRec.location, newRec.food);
+        // Check for manual coordinates override
+        const coordsInput = document.getElementById('form-coords').value.trim();
+        const key = `${newRec.location}|${newRec.food}`;
+        
+        if (coordsInput) {
+            const coordParts = coordsInput.split(/[，,]/);
+            if (coordParts.length === 2) {
+                const lat = parseFloat(coordParts[0].trim());
+                const lng = parseFloat(coordParts[1].trim());
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    // Save in current memory
+                    coordsDb[key] = {
+                        lat: lat,
+                        lng: lng,
+                        address: "手動校正位置",
+                        type: "restaurant"
+                    };
+                    
+                    // Save in LocalStorage overrides
+                    const savedOverrides = JSON.parse(localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
+                    savedOverrides[key] = coordsDb[key];
+                    localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(savedOverrides));
+                    console.log(`Saved manual coordinates override for: ${key} -> ${lat}, ${lng}`);
+                }
+            }
+        } else {
+            // Geocode coordinates on save if we don't have them in our local DB
+            saveNewCoordsIfMissing(newRec.location, newRec.food);
+        }
         
         const customGasUrl = localStorage.getItem(STORAGE_GAS_URL_KEY);
         
@@ -814,9 +864,9 @@ function saveNewCoordsIfMissing(loc, food) {
         else if (loc.includes("三峽")) homeKey = "精靈阿嬤家";
         
         const homes = {
-            "竹南家": { lat: 24.6853, lng: 120.8753, address: "竹南家 (甜蜜的家)", type: "home" },
+            "竹南家": { lat: 24.679919, lng: 120.868691, address: "竹南家 (苗栗縣竹南鎮真如路561巷)", type: "home" },
             "新竹家": { lat: 24.8036, lng: 120.9686, address: "新竹家", type: "home" },
-            "大溪家": { lat: 24.8804, lng: 121.2868, address: "大溪家", type: "home" },
+            "大溪家": { lat: 24.877811, lng: 121.259996, address: "大溪家 (桃園市大溪區員林路三段257巷35弄)", type: "home" },
             "精靈阿嬤家": { lat: 24.9343, lng: 121.3718, address: "精靈阿嬤家", type: "home" }
         };
         coordsDb[key] = homes[homeKey];
