@@ -173,6 +173,8 @@ function parseCSV(text) {
             if (header === '時間') fieldName = 'date';
             else if (header === '地點') fieldName = 'location';
             else if (header === '餐廳/美食') fieldName = 'food';
+            else if (header === '緯度' || header.toLowerCase() === 'latitude' || header.toLowerCase() === 'lat') fieldName = 'lat';
+            else if (header === '經度' || header.toLowerCase() === 'longitude' || header.toLowerCase() === 'lng' || header.toLowerCase() === 'lon') fieldName = 'lng';
             
             record[fieldName] = line[colIdx].trim();
         });

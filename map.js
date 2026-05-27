@@ -113,13 +113,28 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
     
     records.forEach((rec) => {
         const key = `${rec.location}|${rec.food}`;
-        const coord = coordsDb[key];
         
-        if (coord && coord.lat && coord.lng) {
-            const lat = coord.lat;
-            const lng = coord.lng;
-            const type = coord.type || 'restaurant';
-            
+        // Prioritize coordinates parsed directly from the Google Sheet columns (rec.lat, rec.lng)
+        let lat = rec.lat ? parseFloat(rec.lat) : null;
+        let lng = rec.lng ? parseFloat(rec.lng) : null;
+        let address = "";
+        let type = "restaurant";
+        
+        // If not present in Sheet columns, fall back to our coordinates database coordsDb
+        if (!lat || !lng) {
+            const coord = coordsDb[key];
+            if (coord && coord.lat && coord.lng) {
+                lat = coord.lat;
+                lng = coord.lng;
+                address = coord.address || "";
+                type = coord.type || "restaurant";
+            }
+        } else {
+            address = "Google 試算表直接定位";
+            type = rec.location.includes("家") ? "home" : "restaurant";
+        }
+        
+        if (lat && lng) {
             // Create L.marker
             const marker = L.marker([lat, lng], {
                 icon: createCustomIcon(type),
@@ -141,7 +156,7 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
                 </div>
                 ${noteText}
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top:0.4rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:0.3rem;">
-                    🏢 ${coord.address || ''}
+                    🏢 ${address}
                 </div>
                 <a href="${mapsLink}" target="_blank" class="map-popup-link">
                     <i data-lucide="map"></i> <span>在 Google 地圖中開啟</span>
