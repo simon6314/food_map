@@ -872,9 +872,11 @@ function setupEventListeners() {
         const csvArea = document.getElementById('export-csv-text');
         csvArea.select();
         navigator.clipboard.writeText(csvArea.value);
-        // 13. Setup clickable statistics details listeners
-        setupStatsDetails();
+        alert("📋 已經成功複製 CSV 內容到您的剪貼簿！\n現在您可以打開 Google Sheet，整段貼上覆蓋即可同步。");
     });
+    
+    // 13. Setup clickable statistics details listeners
+    setupStatsDetails();
 }
 
 /**
