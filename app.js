@@ -896,10 +896,9 @@ function setupEventListeners() {
 function generateExportCSVText() {
     const csvRows = [["時間", "地點", "餐廳/美食", "Full Address", "Latitude", "Longitude"]];
     
-    // Iterate base records + overrides in logical sorted index order
-    // To restore original layout sequence, sort active database by date ascending
+    // Sort active database by date descending so the newest records are at the top
     const chronologicalAll = [...activeRecords].sort((a,b) => {
-        return parseDate(a.date) - parseDate(b.date);
+        return parseDate(b.date) - parseDate(a.date);
     });
     
     chronologicalAll.forEach(rec => {
