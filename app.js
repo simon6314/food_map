@@ -17,6 +17,8 @@ let coordsDb = {};
 let activeYear = 'all';
 let searchQuery = '';
 let isDescending = true; // Default: newest first
+let activeCategory = null; // Filter by food category name
+
 
 // Sheet source URL key in LocalStorage
 const STORAGE_SHEET_URL_KEY = 'food_map_sheet_url';
@@ -240,13 +242,19 @@ function mergeRecords() {
  * Filter, Sort and Render both the List UI and the Map polyline
  */
 function applyFiltersAndRender(animatePath = false) {
-    // 1. Apply Year & Search Filters
+    // 1. Apply Year, Search & Category Filters
     let filtered = activeRecords.filter(rec => {
         // Year filter
         if (activeYear !== 'all') {
             const yearStr = rec.date.split('/')[0];
             const targetYearTwoDigits = activeYear.slice(-2);
             if (yearStr !== targetYearTwoDigits) return false;
+        }
+        
+        // Category filter
+        if (activeCategory) {
+            const cat = classifyFoodCategory(rec.location, rec.food);
+            if (cat.name !== activeCategory) return false;
         }
         
         // Search query filter (matches date, location, or food/restaurant)
@@ -590,6 +598,7 @@ function setupEventListeners() {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
             activeYear = tab.getAttribute('data-year');
+            activeCategory = null; // Clear category filter when year changes
             applyFiltersAndRender(true); // Animate path when switching years
         });
     });
@@ -600,6 +609,7 @@ function setupEventListeners() {
     
     searchInput.addEventListener('input', (e) => {
         searchQuery = e.target.value.trim();
+        activeCategory = null; // Reset category filter on manual search input
         if (searchQuery) {
             searchClear.classList.remove('hidden');
         } else {
@@ -611,6 +621,7 @@ function setupEventListeners() {
     searchClear.addEventListener('click', () => {
         searchInput.value = '';
         searchQuery = '';
+        activeCategory = null; // Also clear category filter
         searchClear.classList.add('hidden');
         applyFiltersAndRender(false);
     });
@@ -1087,13 +1098,35 @@ function updateStatsDetails() {
     
     if (container) container.classList.remove('hidden');
     
-    const records = window.currentFilteredRecords || activeRecords;
+    // Filter records for stats drawer breakdown strictly by year & search query (ignoring activeCategory & activeRegion click)
+    const records = activeRecords.filter(rec => {
+        // Year filter
+        if (activeYear !== 'all') {
+            const yearStr = rec.date.split('/')[0];
+            const targetYearTwoDigits = activeYear.slice(-2);
+            if (yearStr !== targetYearTwoDigits) return false;
+        }
+        
+        // Search query filter (ignore if it's a toggled region tag to prevent shrinking the drawer)
+        if (searchQuery) {
+            const isClickedLoc = activeRecords.some(r => r.location === searchQuery);
+            if (!isClickedLoc) {
+                const q = searchQuery.toLowerCase();
+                const dateMatch = rec.date.toLowerCase().includes(q);
+                const locMatch = rec.location.toLowerCase().includes(q);
+                const foodMatch = rec.food.toLowerCase().includes(q);
+                if (!dateMatch && !locMatch && !foodMatch) return false;
+            }
+        }
+        return true;
+    });
+    
     const yearLabel = activeYear === 'all' ? '歷年全部' : `${activeYear} 年`;
     
     contentEl.innerHTML = '';
     
     if (activeDetailsTab === 'locations') {
-        titleEl.innerHTML = `<i data-lucide="map-pin" style="width:1.1rem;height:1.1rem;color:var(--primary);"></i> 踏足地區清單 (${yearLabel})`;
+        titleEl.innerHTML = `<i data-lucide="map-pin" style="width:1.1rem;height:1.1rem;color:var(--primary);"></i> 踏足地區清單 (${yearLabel}) <span style="font-size:0.75rem;font-weight:normal;color:var(--text-secondary);margin-left:0.5rem;">💡 點擊地區可篩選下方足跡</span>`;
         
         if (records.length === 0) {
             contentEl.innerHTML = '<div style="font-size:0.85rem;color:var(--text-secondary);text-align:center;padding:1rem;">該年度無足跡資料</div>';
@@ -1117,11 +1150,13 @@ function updateStatsDetails() {
         sortedLocs.forEach(loc => {
             const count = locCounts[loc];
             const isHome = loc.includes("家");
+            const isFilterActive = searchQuery === loc;
             const homeClass = isHome ? 'home-tag' : '';
             const iconName = isHome ? 'home' : 'map-pin';
             
             const item = document.createElement('div');
-            item.className = `details-tag ${homeClass}`;
+            item.className = `details-tag ${homeClass} ${isFilterActive ? 'active' : ''}`;
+            item.style = 'cursor: pointer;' + (isFilterActive ? 'border-color: var(--secondary) !important; background-color: var(--secondary-light) !important; box-shadow: 0 0 8px rgba(17, 118, 110, 0.2);' : '');
             item.innerHTML = `
                 <span style="display:flex;align-items:center;gap:0.3rem;">
                     <i data-lucide="${iconName}" style="width:0.75rem;height:0.75rem;"></i>
@@ -1129,13 +1164,35 @@ function updateStatsDetails() {
                 </span>
                 <span class="details-tag-count">${count}次</span>
             `;
+            
+            item.addEventListener('click', () => {
+                const searchInput = document.getElementById('search-input');
+                const searchClear = document.getElementById('search-clear');
+                
+                // Clear category filter when switching to location filter
+                activeCategory = null;
+                
+                if (searchQuery === loc) {
+                    // Toggle off
+                    searchInput.value = '';
+                    searchQuery = '';
+                    searchClear.classList.add('hidden');
+                } else {
+                    // Toggle on
+                    searchInput.value = loc;
+                    searchQuery = loc;
+                    searchClear.classList.remove('hidden');
+                }
+                applyFiltersAndRender(false);
+            });
+            
             grid.appendChild(item);
         });
         
         contentEl.appendChild(grid);
         
     } else if (activeDetailsTab === 'meals') {
-        titleEl.innerHTML = `<i data-lucide="utensils" style="width:1.1rem;height:1.1rem;color:var(--primary);"></i> 美食分析清單 (${yearLabel})`;
+        titleEl.innerHTML = `<i data-lucide="utensils" style="width:1.1rem;height:1.1rem;color:var(--primary);"></i> 美食分析清單 (${yearLabel}) <span style="font-size:0.75rem;font-weight:normal;color:var(--text-secondary);margin-left:0.5rem;">💡 點擊美食類別可篩選下方足跡</span>`;
         
         if (records.length === 0) {
             contentEl.innerHTML = '<div style="font-size:0.85rem;color:var(--text-secondary);text-align:center;padding:1rem;">該年度無美食資料</div>';
@@ -1160,21 +1217,43 @@ function updateStatsDetails() {
             const count = catCounts[catName];
             const percent = Math.round((count / records.length) * 100);
             const config = catConfigs[catName];
+            const isActive = activeCategory === catName;
+            
+            // Custom highlight style using the category's natural color
+            const activeStyle = isActive ? `border-color: ${config.textColor} !important; background-color: ${config.color} !important; box-shadow: 0 0 10px ${config.color}; cursor: pointer;` : 'cursor: pointer;';
             
             const card = document.createElement('div');
-            card.className = 'details-food-card';
+            card.className = `details-food-card ${isActive ? 'active' : ''}`;
+            card.style = activeStyle;
             card.innerHTML = `
                 <div class="details-food-header">
                     <span class="details-food-label" style="color: ${config.textColor}">
                         <i data-lucide="${config.icon}"></i>
                         <span>${config.name}</span>
                     </span>
-                    <span class="details-food-count">${count} 次 (${percent}%)</span>
+                    <span class="details-food-count" style="font-weight: 700; color: ${config.textColor}">${count} 次 (${percent}%)</span>
                 </div>
-                <div class="progress-track">
+                <div class="progress-track" style="background-color: ${isActive ? 'rgba(255,255,255,0.4)' : ''}">
                     <div class="progress-fill" style="width: ${percent}%; background-color: ${config.textColor}"></div>
                 </div>
             `;
+            
+            card.addEventListener('click', () => {
+                // Clear search query when switching to category filter
+                const searchInput = document.getElementById('search-input');
+                const searchClear = document.getElementById('search-clear');
+                searchInput.value = '';
+                searchQuery = '';
+                searchClear.classList.add('hidden');
+                
+                if (activeCategory === catName) {
+                    activeCategory = null;
+                } else {
+                    activeCategory = catName;
+                }
+                applyFiltersAndRender(false);
+            });
+            
             foodGrid.appendChild(card);
         });
         
