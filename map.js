@@ -18,6 +18,29 @@ const MAP_TILES = {
 const MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 /**
+ * Get calibrated coordinates for home locations.
+ * If the location contains "家", it maps to a specific home or defaults to "竹南家".
+ * Returns null if the location does not contain "家".
+ */
+function getHomeCoordinates(location) {
+    if (!location || !location.includes("家")) return null;
+    
+    let homeKey = "竹南家";
+    if (location.includes("新竹")) homeKey = "新竹家";
+    else if (location.includes("大溪")) homeKey = "大溪家";
+    else if (location.includes("三峽") || location.includes("阿嬤") || location.includes("阿罵")) homeKey = "精靈阿嬤家";
+    
+    const homes = {
+        "竹南家": { lat: 24.679919, lng: 120.868691, address: "竹南家 (苗栗縣竹南鎮真如路561巷)", type: "home" },
+        "新竹家": { lat: 24.78359, lng: 121.022661, address: "新竹家 (新竹市東區關東路78號)", type: "home" },
+        "大溪家": { lat: 24.877811, lng: 121.259996, address: "大溪家 (桃園市大溪區員林路三段257巷35弄)", type: "home" },
+        "精靈阿嬤家": { lat: 24.9358, lng: 121.3735, address: "精靈阿嬤家 (新北市三峽區大同路220號)", type: "home" }
+    };
+    return homes[homeKey];
+}
+
+
+/**
  * Initialize Leaflet Map
  */
 function initMap(initialTheme = 'light') {
@@ -114,14 +137,26 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
     records.forEach((rec) => {
         const key = `${rec.location}|${rec.food}`;
         
-        // Prioritize coordinates parsed directly from the Google Sheet columns (rec.lat, rec.lng)
-        let lat = rec.lat ? parseFloat(rec.lat) : null;
-        let lng = rec.lng ? parseFloat(rec.lng) : null;
+        let lat = null;
+        let lng = null;
         let address = "";
         let type = "restaurant";
         
-        // If not present in Sheet columns, fall back to our coordinates database coordsDb
-        if (!lat || !lng) {
+        const isHomeLocation = rec.location.includes("家");
+        const homeCoords = getHomeCoordinates(rec.location);
+        
+        if (isHomeLocation && homeCoords) {
+            lat = homeCoords.lat;
+            lng = homeCoords.lng;
+            address = homeCoords.address + (rec.food ? ` (${rec.food})` : "");
+            type = "home";
+        } else if (rec.lat && rec.lng) {
+            lat = parseFloat(rec.lat);
+            lng = parseFloat(rec.lng);
+            address = "Google 試算表直接定位";
+            type = "restaurant";
+        } else {
+            // Fetch from coordinates database coordsDb
             const coord = coordsDb[key];
             if (coord && coord.lat && coord.lng) {
                 lat = coord.lat;
@@ -129,10 +164,8 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
                 address = coord.address || "";
                 type = coord.type || "restaurant";
             }
-        } else {
-            address = "Google 試算表直接定位";
-            type = rec.location.includes("家") ? "home" : "restaurant";
         }
+
         
         if (lat && lng) {
             // Create L.marker
@@ -225,7 +258,15 @@ function highlightMapMarker(recordIndex, isHighlighted = true) {
  */
 function focusMarker(recordIndex, coordsDb, key) {
     const marker = mapMarkers[recordIndex];
-    const coord = coordsDb[key];
+    const loc = key.split('|')[0];
+    
+    let coord = null;
+    const homeCoords = getHomeCoordinates(loc);
+    if (homeCoords) {
+        coord = homeCoords;
+    } else {
+        coord = coordsDb[key];
+    }
     
     if (coord && coord.lat && coord.lng) {
         map.flyTo([coord.lat, coord.lng], 16, {

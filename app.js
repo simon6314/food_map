@@ -276,6 +276,9 @@ function applyFiltersAndRender(animatePath = false) {
     
     // 5. Render Map polyline path and markers
     updateMapTrail(filtered, coordsDb, animatePath);
+    
+    // 6. Render Annual Insights panel
+    renderAnnualInsights();
 }
 
 /**
@@ -508,12 +511,18 @@ window.openEditModal = function(recordIndex) {
             
             // Pre-fill custom coordinates if they exist in coordsDb
             const key = `${rec.location}|${rec.food}`;
-            const coord = coordsDb[key];
-            if (coord && coord.lat && coord.lng) {
-                document.getElementById('form-coords').value = `${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}`;
+            const homeCoords = getHomeCoordinates(rec.location);
+            if (homeCoords) {
+                document.getElementById('form-coords').value = `${homeCoords.lat.toFixed(6)}, ${homeCoords.lng.toFixed(6)}`;
             } else {
-                document.getElementById('form-coords').value = '';
+                const coord = coordsDb[key];
+                if (coord && coord.lat && coord.lng) {
+                    document.getElementById('form-coords').value = `${coord.lat.toFixed(6)}, ${coord.lng.toFixed(6)}`;
+                } else {
+                    document.getElementById('form-coords').value = '';
+                }
             }
+
         }
     } else {
         // Add mode
@@ -653,7 +662,13 @@ function setupEventListeners() {
         const coordsInput = document.getElementById('form-coords').value.trim();
         const key = `${newRec.location}|${newRec.food}`;
         
-        if (coordsInput) {
+        const homeCoords = getHomeCoordinates(newRec.location);
+        if (homeCoords) {
+            // Force calibrated home coordinates
+            newRec.lat = homeCoords.lat;
+            newRec.lng = homeCoords.lng;
+            coordsDb[key] = homeCoords;
+        } else if (coordsInput) {
             const coordParts = coordsInput.split(/[，,]/);
             if (coordParts.length === 2) {
                 const lat = parseFloat(coordParts[0].trim());
@@ -664,7 +679,7 @@ function setupEventListeners() {
                         lat: lat,
                         lng: lng,
                         address: "手動校正位置",
-                        type: newRec.location.includes("家") ? "home" : "restaurant"
+                        type: "restaurant"
                     };
                     
                     // Save in LocalStorage overrides
@@ -688,6 +703,7 @@ function setupEventListeners() {
                 newRec.lng = coordsDb[key].lng;
             }
         }
+
         
         const customGasUrl = localStorage.getItem(STORAGE_GAS_URL_KEY);
         
@@ -873,15 +889,24 @@ function generateExportCSVText() {
         
         // Find coordinates from record or fallback to coordsDb
         const key = `${rec.location}|${rec.food}`;
-        let lat = rec.lat || '';
-        let lng = rec.lng || '';
-        if (!lat || !lng) {
+        let lat = '';
+        let lng = '';
+        
+        const homeCoords = getHomeCoordinates(rec.location);
+        if (homeCoords) {
+            lat = homeCoords.lat;
+            lng = homeCoords.lng;
+        } else if (rec.lat && rec.lng) {
+            lat = rec.lat;
+            lng = rec.lng;
+        } else {
             const coord = coordsDb[key];
             if (coord && coord.lat && coord.lng) {
                 lat = coord.lat;
                 lng = coord.lng;
             }
         }
+
         
         // Create full address by combining location and food, and escape commas if needed
         const rawAddress = `${rec.location} ${rec.food}`;
@@ -902,21 +927,12 @@ function saveNewCoordsIfMissing(loc, food) {
     if (coordsDb[key]) return; // already exists
     
     // If it's a cozy home location
-    if (loc.includes("家")) {
-        let homeKey = "竹南家";
-        if (loc.includes("新竹")) homeKey = "新竹家";
-        else if (loc.includes("大溪")) homeKey = "大溪家";
-        else if (loc.includes("三峽")) homeKey = "精靈阿嬤家";
-        
-        const homes = {
-            "竹南家": { lat: 24.679919, lng: 120.868691, address: "竹南家 (苗栗縣竹南鎮真如路561巷)", type: "home" },
-            "新竹家": { lat: 24.8036, lng: 120.9686, address: "新竹家", type: "home" },
-            "大溪家": { lat: 24.877811, lng: 121.259996, address: "大溪家 (桃園市大溪區員林路三段257巷35弄)", type: "home" },
-            "精靈阿嬤家": { lat: 24.9343, lng: 121.3718, address: "精靈阿嬤家", type: "home" }
-        };
-        coordsDb[key] = homes[homeKey];
+    const homeCoords = getHomeCoordinates(loc);
+    if (homeCoords) {
+        coordsDb[key] = homeCoords;
         return;
     }
+
     
     // Otherwise fallback to city center coordinates
     const cities = {
@@ -946,4 +962,229 @@ function saveNewCoordsIfMissing(loc, food) {
         address: `${cityCoords.address} (${food})`,
         type: "fallback"
     };
+}
+
+// Insights Active Year State
+let insightsActiveYear = 'all';
+
+/**
+ * Classify a food name and location into culinary categories
+ */
+function classifyFoodCategory(location, food) {
+    const text = (location + " " + food).toLowerCase();
+    
+    if (text.includes("火鍋") || text.includes("鍋") || text.includes("錢都") || text.includes("六扇門") || text.includes("石二鍋") || text.includes("薑母鴨") || text.includes("沙茶鍋") || text.includes("羊肉爐") || text.includes("吃到飽") || text.includes("饗食天堂")) {
+        return { name: "暖胃火鍋 🍲", icon: "soup", color: "hsla(3, 85%, 60%, 0.15)", textColor: "hsl(3, 85%, 55%)" };
+    }
+    if (text.includes("燒肉") || text.includes("烤肉") || text.includes("屋馬") || text.includes("政宗") || text.includes("串燒") || text.includes("烤炸") || text.includes("鐵板燒") || text.includes("烤雞")) {
+        return { name: "美味燒肉 🍖", icon: "flame", color: "hsla(28, 90%, 55%, 0.15)", textColor: "hsl(28, 90%, 50%)" };
+    }
+    if (text.includes("壽司") || text.includes("藏壽司") || text.includes("定食") || text.includes("豬排") || text.includes("勝牛") || text.includes("杏子") || text.includes("生魚片") || text.includes("拉麵") || text.includes("烏龍麵") || text.includes("丼飯") || text.includes("日式") || text.includes("章魚燒")) {
+        return { name: "日式料理 🍣", icon: "shrub", color: "hsla(145, 60%, 45%, 0.15)", textColor: "hsl(145, 60%, 35%)" };
+    }
+    if (text.includes("義式") || text.includes("義大利麵") || text.includes("pizza") || text.includes("披薩") || text.includes("漢堡") || text.includes("牛排") || text.includes("得正") || text.includes("炸魚薯條") || text.includes("西餐") || text.includes("洋食")) {
+        return { name: "西式異國 🍕", icon: "croissant", color: "hsla(210, 80%, 55%, 0.15)", textColor: "hsl(210, 80%, 50%)" };
+    }
+    if (text.includes("早餐") || text.includes("早午餐") || text.includes("burger") || text.includes("麥味登") || text.includes("qburger") || text.includes("三明治") || text.includes("吐司") || text.includes("彬彬") || text.includes("蛋餅") || text.includes("饅頭") || text.includes("鬆餅")) {
+        return { name: "活力早午餐 🍳", icon: "egg", color: "hsla(45, 95%, 50%, 0.15)", textColor: "hsl(40, 85%, 45%)" };
+    }
+    if (text.includes("咖啡") || text.includes("甜點") || text.includes("冰") || text.includes("蛋糕") || text.includes("麻糬") || text.includes("星巴克") || text.includes("綠豆沙") || text.includes("茶") || text.includes("得正") || text.includes("下午茶") || text.includes("飲") || text.includes("橘子") || text.includes("鮮茶道")) {
+        return { name: "甜點下午茶 ☕", icon: "coffee", color: "hsla(300, 60%, 60%, 0.15)", textColor: "hsl(300, 60%, 55%)" };
+    }
+    // Default fallback to Chinese / local snacks
+    return { name: "地方特色小吃 🥢", icon: "utensils", color: "hsla(175, 77%, 26%, 0.15)", textColor: "hsl(175, 77%, 26%)" };
+}
+
+/**
+ * Render Collapsible Annual Insights Dashboard
+ */
+function renderAnnualInsights() {
+    // 1. Setup Toggle Listener if not done
+    const toggleBtn = document.getElementById('btn-toggle-insights');
+    const insightsPanel = document.getElementById('insights-panel');
+    
+    if (toggleBtn && !toggleBtn.dataset.listener) {
+        toggleBtn.dataset.listener = 'true';
+        toggleBtn.addEventListener('click', () => {
+            const isHidden = insightsPanel.classList.contains('hidden');
+            if (isHidden) {
+                insightsPanel.classList.remove('hidden');
+                toggleBtn.classList.add('active');
+                toggleBtn.querySelector('span span').innerText = '收合年度足跡與美食分析 📊';
+                // Trigger animation by rendering
+                updateInsightsData();
+            } else {
+                insightsPanel.classList.add('hidden');
+                toggleBtn.classList.remove('active');
+                toggleBtn.querySelector('span span').innerText = '展開年度足跡與美食分析 📊';
+            }
+        });
+    }
+    
+    // 2. If panel is expanded, refresh data dynamically
+    if (insightsPanel && !insightsPanel.classList.contains('hidden')) {
+        updateInsightsData();
+    }
+}
+
+/**
+ * Generate year tabs and statistics inside insights
+ */
+function updateInsightsData() {
+    // A. Extract all available years from active database
+    const availableYears = new Set();
+    activeRecords.forEach(rec => {
+        const yearStr = rec.date.split('/')[0];
+        if (yearStr && yearStr.length === 2) {
+            availableYears.add('20' + yearStr);
+        }
+    });
+    
+    const sortedYears = Array.from(availableYears).sort().reverse(); // newest year first
+    
+    // B. Render Insights Year Tabs in DOM
+    const tabsContainer = document.getElementById('insights-year-tabs');
+    tabsContainer.innerHTML = '';
+    
+    // Add "All" tab
+    const allTab = document.createElement('button');
+    allTab.className = `insights-tab-pill ${insightsActiveYear === 'all' ? 'active' : ''}`;
+    allTab.innerText = '歷年全部';
+    allTab.addEventListener('click', () => {
+        insightsActiveYear = 'all';
+        updateInsightsData();
+    });
+    tabsContainer.appendChild(allTab);
+    
+    // Add dynamic year tabs
+    sortedYears.forEach(year => {
+        const tab = document.createElement('button');
+        tab.className = `insights-tab-pill ${insightsActiveYear === year ? 'active' : ''}`;
+        tab.innerText = `${year} 年`;
+        tab.addEventListener('click', () => {
+            insightsActiveYear = year;
+            updateInsightsData();
+        });
+        tabsContainer.appendChild(tab);
+    });
+    
+    // C. Filter records based on insights active year
+    const targetRecords = activeRecords.filter(rec => {
+        if (insightsActiveYear === 'all') return true;
+        const yearStr = '20' + rec.date.split('/')[0];
+        return yearStr === insightsActiveYear;
+    });
+    
+    // D. Visited Districts Column Logic
+    renderInsightsLocations(targetRecords);
+    
+    // E. Food Categories Column Logic
+    renderInsightsFood(targetRecords);
+}
+
+/**
+ * Render Visited Districts tag list
+ */
+function renderInsightsLocations(records) {
+    const container = document.getElementById('insights-locations-list');
+    container.innerHTML = '';
+    
+    if (records.length === 0) {
+        container.innerHTML = '<span style="font-size:0.85rem;color:var(--text-light)">無足跡資料</span>';
+        return;
+    }
+    
+    // Count location occurrences
+    const locCounts = {};
+    records.forEach(rec => {
+        const cleanLoc = rec.location.trim();
+        if (cleanLoc) {
+            locCounts[cleanLoc] = (locCounts[cleanLoc] || 0) + 1;
+        }
+    });
+    
+    // Sort locations by count descending
+    const sortedLocs = Object.keys(locCounts).sort((a,b) => locCounts[b] - locCounts[a]);
+    
+    sortedLocs.forEach(loc => {
+        const count = locCounts[loc];
+        const isHome = loc.includes("家");
+        const homeClass = isHome ? 'home-tag' : '';
+        const iconName = isHome ? 'home' : 'map-pin';
+        
+        const tag = document.createElement('span');
+        tag.className = `insights-tag ${homeClass}`;
+        tag.innerHTML = `
+            <i data-lucide="${iconName}" style="width:0.75rem;height:0.75rem;"></i>
+            <span>${loc}</span>
+            <span class="insights-tag-count">${count}次</span>
+        `;
+        container.appendChild(tag);
+    });
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons({
+            attrs: {
+                class: ['lucide']
+            },
+            node: container
+        });
+    }
+}
+
+/**
+ * Render Food categories progress bar list
+ */
+function renderInsightsFood(records) {
+    const container = document.getElementById('insights-food-list');
+    container.innerHTML = '';
+    
+    if (records.length === 0) {
+        container.innerHTML = '<span style="font-size:0.85rem;color:var(--text-light)">無美食資料</span>';
+        return;
+    }
+    
+    // Categorize and count food occurrences
+    const catCounts = {};
+    const catConfigs = {}; // save color/icon metadata
+    
+    records.forEach(rec => {
+        const cat = classifyFoodCategory(rec.location, rec.food);
+        catCounts[cat.name] = (catCounts[cat.name] || 0) + 1;
+        catConfigs[cat.name] = cat;
+    });
+    
+    // Sort categories by count descending
+    const sortedCats = Object.keys(catCounts).sort((a,b) => catCounts[b] - catCounts[a]);
+    
+    sortedCats.forEach(catName => {
+        const count = catCounts[catName];
+        const percent = Math.round((count / records.length) * 100);
+        const config = catConfigs[catName];
+        
+        const progressContainer = document.createElement('div');
+        progressContainer.className = 'progress-bar-container';
+        progressContainer.innerHTML = `
+            <div class="progress-bar-header">
+                <span class="progress-label" style="color: ${config.textColor}">
+                    <i data-lucide="${config.icon}"></i>
+                    <span>${config.name}</span>
+                </span>
+                <span class="progress-count">${count} 次 (${percent}%)</span>
+            </div>
+            <div class="progress-track">
+                <div class="progress-fill" style="width: ${percent}%; background-color: ${config.textColor}"></div>
+            </div>
+        `;
+        container.appendChild(progressContainer);
+    });
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons({
+            attrs: {
+                class: ['lucide']
+            },
+            node: container
+        });
+    }
 }
