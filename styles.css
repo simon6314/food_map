@@ -651,6 +651,28 @@ body.dark-mode .location-tag {
     color: var(--primary);
 }
 
+.coords-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background-color: hsla(28, 90%, 55%, 0.08);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.8rem;
+    border-radius: 2rem;
+    border: 1px solid hsla(28, 90%, 55%, 0.15);
+}
+body.dark-mode .coords-badge {
+    background-color: hsla(28, 90%, 55%, 0.15);
+    border-color: hsla(28, 90%, 55%, 0.25);
+}
+.coords-badge svg {
+    width: 0.8rem;
+    height: 0.8rem;
+    color: var(--accent);
+}
+
 /* Card Main Details */
 .card-content h3 {
     font-size: 1.15rem;
@@ -966,6 +988,46 @@ textarea.code-font {
 .leaflet-div-icon {
     background: transparent !important;
     border: none !important;
+}
+
+.leaflet-control-attribution {
+    font-size: 0.62rem !important;
+    background: rgba(255, 255, 255, 0.4) !important;
+    backdrop-filter: blur(5px) !important;
+    color: var(--text-light) !important;
+    border-radius: 4px !important;
+    padding: 0px 4px !important;
+    border: none !important;
+    opacity: 0.45;
+    transition: opacity 0.2s ease;
+}
+
+.leaflet-control-attribution:hover {
+    opacity: 0.95;
+}
+
+body.dark-mode .leaflet-control-attribution {
+    background: rgba(8, 12, 20, 0.5) !important;
+    color: var(--text-light) !important;
+}
+
+.leaflet-control-zoom {
+    border: 1px solid var(--border-glass) !important;
+    box-shadow: var(--shadow-premium) !important;
+    border-radius: 8px !important;
+    overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+    border-bottom: 1px solid var(--border-card) !important;
+    transition: background-color 0.2s ease;
+}
+
+.leaflet-control-zoom a:hover {
+    background-color: var(--primary-light) !important;
+    color: var(--primary) !important;
 }
 
 .leaflet-popup-content-wrapper {

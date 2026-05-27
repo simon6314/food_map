@@ -100,7 +100,17 @@ async function loadDataAndRender() {
             baseRecords = await response.json();
             console.log(`Loaded ${baseRecords.length} real-time records from Google Sheets.`);
         } else {
-            const csvUrl = customSheetUrl || DEFAULT_CSV_PATH;
+            let csvUrl = customSheetUrl || DEFAULT_CSV_PATH;
+            
+            // Automatically convert a standard Google Sheets browser URL to a raw CSV export link
+            if (csvUrl && csvUrl.includes('docs.google.com/spreadsheets')) {
+                const match = csvUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+                if (match) {
+                    csvUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=csv`;
+                    console.log(`Formatted Google Sheet URL to CSV export link: ${csvUrl}`);
+                }
+            }
+            
             console.log(`Fetching data from CSV: ${csvUrl}`);
             const response = await fetch(csvUrl);
             const rawCsvText = await response.text();
@@ -355,6 +365,26 @@ function renderCardsList(records) {
         const addressText = coord && coord.address ? 
             `<div class="card-address"><i data-lucide="compass"></i> <span>${coord.address}</span></div>` : '';
             
+        // Find coordinates for display and source
+        let displayLat = '';
+        let displayLng = '';
+        let coordSource = '';
+        
+        if (rec.lat && rec.lng) {
+            displayLat = parseFloat(rec.lat).toFixed(6);
+            displayLng = parseFloat(rec.lng).toFixed(6);
+            coordSource = '試算表直接定位';
+        } else if (coord && coord.lat && coord.lng) {
+            displayLat = coord.lat.toFixed(6);
+            displayLng = coord.lng.toFixed(6);
+            coordSource = coord.type === 'home' ? '家定位' : '資料庫對應';
+        }
+        
+        let coordsBadge = '';
+        if (displayLat && displayLng) {
+            coordsBadge = `<span class="coords-badge" title="經緯度來源: ${coordSource}"><i data-lucide="compass"></i> <span>${displayLat}, ${displayLng}</span></span>`;
+        }
+        
         // Build card HTML
         const card = document.createElement('div');
         card.className = 'food-card';
@@ -366,6 +396,7 @@ function renderCardsList(records) {
                     <span class="location-tag ${homeClass}">
                         ${homeIcon} <span>${rec.location}</span>
                     </span>
+                    ${coordsBadge}
                 </div>
             </div>
             <div class="card-content">

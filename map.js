@@ -30,9 +30,9 @@ function initMap(initialTheme = 'light') {
         attributionControl: false
     });
     
-    // Add Zoom control at bottom right
+    // Add Zoom control at top right to keep bottom clean
     L.control.zoom({
-        position: 'bottomright'
+        position: 'topright'
     }).addTo(map);
     
     // Add Attribution at bottom right
