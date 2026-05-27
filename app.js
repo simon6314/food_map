@@ -24,8 +24,8 @@ const STORAGE_GAS_URL_KEY = 'food_map_gas_url';
 const STORAGE_OVERRIDES_KEY = 'food_map_overrides';
 const STORAGE_COORDS_OVERRIDES_KEY = 'food_map_coords_overrides';
 
-// Default CSV path (local file in workspace)
-const DEFAULT_CSV_PATH = 'food_map_adjusted.csv';
+// Default CSV path (pointing directly to your live Google Sheet)
+const DEFAULT_CSV_PATH = 'https://docs.google.com/spreadsheets/d/1Kxl_tLb3vDVVk4AAAW4n7qm_OWE5d9YCU6AMttpnAvQ/export?format=csv';
 const DEFAULT_COORDS_PATH = 'coords_db.json';
 
 // Initialize App
