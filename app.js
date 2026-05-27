@@ -476,7 +476,7 @@ function renderCardsList(records) {
 /**
  * Scroll and highlight timeline card when a map marker is clicked
  */
-function highlightTimelineCard(recordIndex) {
+window.highlightTimelineCard = function(recordIndex) {
     // 1. Remove highlight classes from all cards
     document.querySelectorAll('.food-card').forEach(c => c.classList.remove('active-highlight'));
     
@@ -489,7 +489,7 @@ function highlightTimelineCard(recordIndex) {
             block: 'center'
         });
     }
-}
+};
 
 /**
  * Save Overrides to Local Storage and re-render

@@ -144,20 +144,9 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
     
     if (records.length === 0) return;
     
-    // Calculate frequencies of each location in current records
-    const locationCounts = {};
+    // Group records by unique coordinate rounded to 5 decimal places
+    const locationGroups = {};
     records.forEach((rec) => {
-        if (rec.location) {
-            locationCounts[rec.location] = (locationCounts[rec.location] || 0) + 1;
-        }
-    });
-    
-    // 2. Plot Markers
-    const validMarkers = [];
-    
-    records.forEach((rec) => {
-        const key = `${rec.location}|${rec.food}`;
-        
         let lat = null;
         let lng = null;
         let address = "";
@@ -177,7 +166,7 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
             address = "Google 試算表直接定位";
             type = "restaurant";
         } else {
-            // Fetch from coordinates database coordsDb
+            const key = `${rec.location}|${rec.food}`;
             const coord = coordsDb[key];
             if (coord && coord.lat && coord.lng) {
                 lat = coord.lat;
@@ -186,27 +175,54 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
                 type = coord.type || "restaurant";
             }
         }
-
         
         if (lat && lng) {
-            const frequency = locationCounts[rec.location] || 1;
-            // Create L.marker
-            const marker = L.marker([lat, lng], {
-                icon: createCustomIcon(type, false, frequency),
-                title: `${rec.location} - ${rec.food}`
-            });
-            
-            // Store frequency on marker object for highlighted toggle
-            marker.recordFrequency = frequency;
-            
-            // Build rich beautiful popup
+            const coordKey = `${lat.toFixed(5)},${lng.toFixed(5)}`;
+            if (!locationGroups[coordKey]) {
+                locationGroups[coordKey] = {
+                    lat: lat,
+                    lng: lng,
+                    location: rec.location,
+                    type: type,
+                    address: address,
+                    records: []
+                };
+            }
+            locationGroups[coordKey].records.push(rec);
+        }
+    });
+    
+    const validMarkers = [];
+    
+    // Plot one marker per unique coordinate group
+    Object.values(locationGroups).forEach((group) => {
+        const frequency = group.records.length;
+        
+        // Create L.marker
+        const marker = L.marker([group.lat, group.lng], {
+            icon: createCustomIcon(group.type, false, frequency),
+            title: `${group.location} - 共 ${frequency} 次足跡`
+        });
+        
+        // Store frequency on marker object for highlighted toggle
+        marker.recordFrequency = frequency;
+        
+        // Map all records in this group to this marker
+        group.records.forEach((rec) => {
+            mapMarkers[rec.index] = marker;
+        });
+        
+        // Build rich beautiful popup
+        let popupContent = "";
+        if (group.records.length === 1) {
+            const rec = group.records[0];
             const cleanFood = rec.food.split(/[，,]/)[0].trim().replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "");
             const noteText = rec.food.includes("（") || rec.food.includes("(") ? 
                 `<div class="card-note" style="margin-top: 0.25rem;">${rec.food.match(/[\uff08\u0028]([^\uff09\u0029]*)[\uff09\u0029]/)[1]}</div>` : '';
             
             const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rec.location + " " + cleanFood)}`;
             
-            const popupContent = `
+            popupContent = `
                 <div class="map-popup-title">${cleanFood}</div>
                 <div class="map-popup-meta">
                     <span>🗓️ ${rec.date}</span>
@@ -214,35 +230,74 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
                 </div>
                 ${noteText}
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top:0.4rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:0.3rem;">
-                    🏢 ${address}
+                    🏢 ${group.address || rec.location}
                 </div>
                 <a href="${mapsLink}" target="_blank" class="map-popup-link">
                     <i data-lucide="map"></i> <span>在 Google 地圖中開啟</span>
                 </a>
             `;
+        } else {
+            // Sort records in group by date descending
+            const sortedGroupRecords = [...group.records].sort((a, b) => parseDateString(b.date) - parseDateString(a.date));
             
-            marker.bindPopup(popupContent, {
-                maxWidth: 240,
-                closeButton: false
+            let listHtml = "";
+            sortedGroupRecords.forEach((rec) => {
+                const cleanFood = rec.food.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+                const noteText = rec.food.includes("（") || rec.food.includes("(") ? 
+                    `<span class="card-note" style="font-size:0.7rem; padding:0.05rem 0.25rem; margin-left:0.25rem;">${rec.food.match(/[\uff08\u0028]([^\uff09\u0029]*)[\uff09\u0029]/)[1]}</span>` : '';
+                
+                listHtml += `
+                    <div class="popup-list-item" onclick="highlightTimelineCard('${rec.index}')" style="padding: 0.35rem 0; border-bottom: 1px dashed rgba(0,0,0,0.05); transition: background 0.2s;">
+                        <div style="display:flex; justify-content:space-between; font-size:0.72rem; color: var(--text-secondary);">
+                            <span>🗓️ ${rec.date}</span>
+                        </div>
+                        <div style="font-weight:700; font-size:0.78rem; color:var(--text-primary); margin-top:0.1rem;">
+                            ${cleanFood} ${noteText}
+                        </div>
+                    </div>
+                `;
             });
             
-            // Trigger popup Lucide icons refresh after opening
-            marker.on('popupopen', () => {
-                if (typeof lucide !== 'undefined') {
-                    lucide.createIcons();
-                }
-            });
+            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(group.location)}`;
             
-            // Map bidirection interaction (marker click highlights timeline card)
-            marker.on('click', () => {
-                highlightTimelineCard(rec.index);
-            });
-            
-            // Add marker to layer group and store reference
-            markersLayer.addLayer(marker);
-            mapMarkers[rec.index] = marker;
-            validMarkers.push(marker);
+            popupContent = `
+                <div class="map-popup-title" style="border-bottom:1px solid rgba(0,0,0,0.08); padding-bottom:0.3rem; margin-bottom:0.3rem;">
+                    📍 ${group.location} <span style="font-size:0.75rem; font-weight:normal; color:var(--text-secondary);">(${group.records.length} 次足跡)</span>
+                </div>
+                <div style="max-height: 140px; overflow-y: auto; margin-top:0.4rem; padding-right:0.25rem;" class="custom-scrollbar">
+                    ${listHtml}
+                </div>
+                <div style="font-size: 0.68rem; color: var(--text-light); margin-top:0.4rem; text-align:center; border-top:1px solid rgba(0,0,0,0.03); padding-top:0.3rem;">
+                    💡 點擊項目可平滑滑動至下方卡片
+                </div>
+                <a href="${mapsLink}" target="_blank" class="map-popup-link" style="margin-top:0.3rem; display:inline-flex;">
+                    <i data-lucide="map"></i> <span>在 Google 地圖中搜尋</span>
+                </a>
+            `;
         }
+        
+        marker.bindPopup(popupContent, {
+            maxWidth: 240,
+            closeButton: false
+        });
+        
+        // Trigger popup Lucide icons refresh after opening
+        marker.on('popupopen', () => {
+            if (typeof lucide !== 'undefined') {
+                lucide.createIcons();
+            }
+        });
+        
+        // Map bidirection interaction (marker click highlights timeline card of the latest visit)
+        marker.on('click', () => {
+            const sortedGroupRecords = [...group.records].sort((a, b) => parseDateString(b.date) - parseDateString(a.date));
+            if (sortedGroupRecords.length > 0) {
+                highlightTimelineCard(sortedGroupRecords[0].index);
+            }
+        });
+        
+        markersLayer.addLayer(marker);
+        validMarkers.push(marker);
     });
     
     // 3. Fly and Auto-Zoom to Fit Markers
