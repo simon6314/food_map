@@ -106,7 +106,7 @@ function createCustomIcon(type, isHighlighted = false, frequency = 1) {
     // Calculate dynamic parameters based on frequency
     const f = Math.max(1, frequency);
     const scale = Math.min(0.8 + Math.log10(f) * 1.2, 3.2);
-    const opacity = Math.min(0.3 + Math.log10(f) * 0.3, 0.95);
+    const opacity = Math.min(0.35 + Math.log10(f) * 0.3, 0.95); // slightly higher base opacity for static glow
     const coreSize = Math.min(8 + Math.log10(f) * 6, 18);
     
     // Set custom CSS variables for keyframes and core size
@@ -119,8 +119,7 @@ function createCustomIcon(type, isHighlighted = false, frequency = 1) {
     return L.divIcon({
         html: `
             <div class="custom-pulsing-marker ${highlightClass}" style="${styleString}">
-                <div class="marker-pulse-ring ring-1 ${type}"></div>
-                <div class="marker-pulse-ring ring-2 ${type}"></div>
+                <div class="marker-glow-area ${type}"></div>
                 <div class="marker-core ${type}"></div>
             </div>
         `,

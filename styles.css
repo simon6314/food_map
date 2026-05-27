@@ -1095,16 +1095,21 @@ body.dark-mode .leaflet-control-attribution {
     display: flex;
     align-items: center;
     justify-content: center;
+    
+    /* Default fallback values */
+    --freq-scale: 1;
+    --freq-opacity: 0.45;
+    --freq-core-size: 10px;
 }
 
 .marker-core {
-    width: 10px;
-    height: 10px;
+    width: var(--freq-core-size);
+    height: var(--freq-core-size);
     border-radius: 50%;
     position: absolute;
     z-index: 10;
     border: 1.5px solid rgba(255, 255, 255, 0.95);
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .marker-core.home {
@@ -1117,64 +1122,39 @@ body.dark-mode .leaflet-control-attribution {
     box-shadow: 0 0 6px var(--secondary);
 }
 
-.marker-pulse-ring {
+/* Static Explored Territory Glow (Pikmin Style) */
+.marker-glow-area {
     position: absolute;
-    width: 100%;
-    height: 100%;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
-    opacity: 0;
+    transform: scale(var(--freq-scale));
+    opacity: var(--freq-opacity);
     z-index: 1;
     pointer-events: none;
     box-sizing: border-box;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.marker-pulse-ring.home {
-    background: radial-gradient(circle, hsla(336, 80%, 58%, 0.45) 0%, hsla(336, 80%, 58%, 0.1) 60%, rgba(255, 255, 255, 0) 100%);
-    border: 1px solid hsla(336, 80%, 58%, 0.4);
+.marker-glow-area.home {
+    background: radial-gradient(circle, hsla(336, 80%, 58%, 0.65) 0%, hsla(336, 80%, 58%, 0.18) 50%, rgba(255, 255, 255, 0) 70%);
 }
 
-.marker-pulse-ring.restaurant, .marker-pulse-ring.fallback {
-    background: radial-gradient(circle, hsla(175, 77%, 26%, 0.45) 0%, hsla(175, 77%, 26%, 0.1) 60%, rgba(255, 255, 255, 0) 100%);
-    border: 1px solid hsla(175, 77%, 26%, 0.4);
+.marker-glow-area.restaurant, .marker-glow-area.fallback {
+    background: radial-gradient(circle, hsla(175, 77%, 26%, 0.65) 0%, hsla(175, 77%, 26%, 0.18) 50%, rgba(255, 255, 255, 0) 70%);
 }
 
-/* In dark mode, make the glow even more fluorescent! */
-body.dark-mode .marker-pulse-ring.home {
-    background: radial-gradient(circle, hsla(336, 90%, 65%, 0.55) 0%, hsla(336, 90%, 65%, 0.12) 60%, rgba(255, 255, 255, 0) 100%);
-    border: 1px solid hsla(336, 90%, 65%, 0.5);
+/* In dark mode, make the exploration glows beautifully fluorescent */
+body.dark-mode .marker-glow-area.home {
+    background: radial-gradient(circle, hsla(336, 90%, 65%, 0.65) 0%, hsla(336, 90%, 65%, 0.18) 50%, rgba(255, 255, 255, 0) 70%);
 }
 
-body.dark-mode .marker-pulse-ring.restaurant, 
-body.dark-mode .marker-pulse-ring.fallback {
-    background: radial-gradient(circle, hsla(175, 80%, 40%, 0.55) 0%, hsla(175, 80%, 40%, 0.12) 60%, rgba(255, 255, 255, 0) 100%);
-    border: 1px solid hsla(175, 80%, 40%, 0.5);
+body.dark-mode .marker-glow-area.restaurant, 
+body.dark-mode .marker-glow-area.fallback {
+    background: radial-gradient(circle, hsla(175, 80%, 40%, 0.65) 0%, hsla(175, 80%, 40%, 0.18) 50%, rgba(255, 255, 255, 0) 70%);
 }
 
-/* Continuously expanding ring animations */
-.marker-pulse-ring.ring-1 {
-    animation: ripple-spread 3s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
-}
-
-.marker-pulse-ring.ring-2 {
-    animation: ripple-spread 3s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
-    animation-delay: 1.5s;
-}
-
-@keyframes ripple-spread {
-    0% {
-        transform: scale(0.15);
-        opacity: 0;
-    }
-    10% {
-        opacity: 0.85;
-    }
-    100% {
-        transform: scale(1);
-        opacity: 0;
-    }
-}
-
-/* Highlighted marker animation on card hover / focus */
+/* Highlighted state (static golden-orange exploration area) */
 .custom-pulsing-marker.highlighted .marker-core {
     transform: scale(1.6);
     background-color: var(--accent) !important;
@@ -1183,10 +1163,10 @@ body.dark-mode .marker-pulse-ring.fallback {
     z-index: 12;
 }
 
-.custom-pulsing-marker.highlighted .marker-pulse-ring {
-    background: radial-gradient(circle, hsla(28, 90%, 55%, 0.55) 0%, hsla(28, 90%, 55%, 0.12) 60%, rgba(255, 255, 255, 0) 100%) !important;
-    border-color: hsla(28, 90%, 55%, 0.5) !important;
-    animation-duration: 2s; /* Faster animation for highlighted marker */
+.custom-pulsing-marker.highlighted .marker-glow-area {
+    background: radial-gradient(circle, hsla(28, 90%, 55%, 0.75) 0%, hsla(28, 90%, 55%, 0.25) 50%, rgba(255, 255, 255, 0) 70%) !important;
+    transform: scale(calc(var(--freq-scale) * 1.35)); /* Grow slightly when highlighted */
+    opacity: 0.95 !important;
 }
 
 /* ==========================================================================
