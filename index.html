@@ -96,6 +96,42 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Annual Journey & Food Insights Section -->
+                <div class="insights-container" style="margin-top: 1.2rem;">
+                    <button id="btn-toggle-insights" class="btn-insights-toggle">
+                        <span style="display: flex; align-items: center; gap: 0.5rem;">
+                            <i data-lucide="bar-chart-2"></i>
+                            <span>展開年度足跡與美食分析 📊</span>
+                        </span>
+                        <i data-lucide="chevron-down" class="icon-chevron"></i>
+                    </button>
+                    
+                    <div id="insights-panel" class="insights-panel hidden">
+                        <!-- Navigation tabs for years inside insights -->
+                        <div class="insights-year-tabs" id="insights-year-tabs">
+                            <!-- Injected dynamically -->
+                        </div>
+                        
+                        <div class="insights-grid">
+                            <!-- Visited Districts Column -->
+                            <div class="insights-col">
+                                <h3><i data-lucide="map-pin"></i> 踏足地區統計</h3>
+                                <div id="insights-locations-list" class="insights-tag-list">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Food Categories Column -->
+                            <div class="insights-col">
+                                <h3><i data-lucide="utensils"></i> 美食類別分析</h3>
+                                <div id="insights-food-list" class="insights-progress-list">
+                                    <!-- Injected dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </header>
 
             <!-- Search, Filter & Tabs Section -->
