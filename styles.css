@@ -1043,7 +1043,7 @@ textarea.code-font {
     box-shadow: 0 0 4px var(--primary);
 }
 
-.marker-pin.restaurant {
+.marker-pin.restaurant, .marker-pin.fallback {
     background-color: var(--secondary);
     box-shadow: 0 0 4px var(--secondary);
 }
@@ -1062,7 +1062,7 @@ textarea.code-font {
     background-color: var(--primary);
 }
 
-.marker-pulse.restaurant {
+.marker-pulse.restaurant, .marker-pulse.fallback {
     background-color: var(--secondary);
 }
 
