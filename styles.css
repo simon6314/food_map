@@ -963,6 +963,11 @@ textarea.code-font {
 }
 
 /* 8. Leaflet Map Popup and Marker Custom Styles */
+.leaflet-div-icon {
+    background: transparent !important;
+    border: none !important;
+}
+
 .leaflet-popup-content-wrapper {
     background-color: var(--bg-card) !important;
     border: 1px solid var(--border-glass) !important;

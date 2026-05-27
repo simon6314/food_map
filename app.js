@@ -654,7 +654,7 @@ function setupEventListeners() {
                         lat: lat,
                         lng: lng,
                         address: "手動校正位置",
-                        type: "restaurant"
+                        type: newRec.location.includes("家") ? "home" : "restaurant"
                     };
                     
                     // Save in LocalStorage overrides
@@ -662,36 +662,58 @@ function setupEventListeners() {
                     savedOverrides[key] = coordsDb[key];
                     localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(savedOverrides));
                     console.log(`Saved manual coordinates override for: ${key} -> ${lat}, ${lng}`);
+                    
+                    // Put coordinates into newRec for posting to Google Sheets!
+                    newRec.lat = lat;
+                    newRec.lng = lng;
                 }
             }
         } else {
             // Geocode coordinates on save if we don't have them in our local DB
             saveNewCoordsIfMissing(newRec.location, newRec.food);
+            
+            // Automatically pull coordinates from coordsDb if present
+            if (coordsDb[key]) {
+                newRec.lat = coordsDb[key].lat;
+                newRec.lng = coordsDb[key].lng;
+            }
         }
         
         const customGasUrl = localStorage.getItem(STORAGE_GAS_URL_KEY);
         
-        // If we have Apps Script URL and are adding a NEW card, post directly to Google Sheets!
-        if (customGasUrl && !recordIndex) {
+        // If we have Apps Script URL, sync to Google Sheet (either ADD or EDIT of a base record)
+        if (customGasUrl && (!recordIndex || !recordIndex.startsWith('added-'))) {
             const submitBtn = formCard.querySelector('button[type="submit"]');
             const originalText = submitBtn.innerHTML;
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:1.1rem;height:1.1rem;margin-right:0.5rem;display:inline-block;animation:spin 1s linear infinite;"></i> <span>連線寫入 Google Sheet...</span>';
             if (typeof lucide !== 'undefined') lucide.createIcons();
             
+            // Prepare payload with action and index
+            const payload = {
+                ...newRec,
+                action: recordIndex ? "edit" : "add",
+                index: recordIndex ? parseInt(recordIndex) : undefined
+            };
+            
             try {
-                console.log(`Posting new record to Google Sheets via GAS:`, newRec);
+                console.log(`Posting record to Google Sheets via GAS:`, payload);
                 const response = await fetch(customGasUrl, {
                     method: 'POST',
                     mode: 'no-cors', // standard for GAS web apps cross-origin posting
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(newRec)
+                    body: JSON.stringify(payload)
                 });
                 
-                // Since 'no-cors' mode returns opaque response, we assume success after fetch completes
-                console.log("Record posted successfully!");
+                console.log("Record synced successfully to Google Sheets!");
+                
+                // Clear any local edit override since it is now saved in the sheet
+                if (recordIndex) {
+                    delete localOverrides.edited[parseInt(recordIndex)];
+                    localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(localOverrides));
+                }
                 
                 // Reset save button and close modal
                 submitBtn.disabled = false;
@@ -700,19 +722,18 @@ function setupEventListeners() {
                 
                 // Fetch live data immediately from Google Sheets
                 await loadDataAndRender();
-                alert("🎉 成功！美食足跡已即時同步寫入您的 Google 試算表！");
+                alert(recordIndex ? "🎉 成功！美食足跡編輯已同步更新至您的 Google 試算表！" : "🎉 成功！美食足跡已即時同步寫入您的 Google 試算表！");
                 return;
             } catch (err) {
                 console.error("Failed to post to Google Sheets:", err);
-                alert("⚠️ 連線寫入 Google 試算表失敗，已改為先儲存在您的本機快取中！");
-                // Fallback to local storage if API write fails
+                alert("⚠️ 連線更新 Google 試算表失敗，已改為先儲存在您的本機快取中！");
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
         }
         
         if (recordIndex) {
-            // EDIT Mode
+            // EDIT Mode (fallback local storage)
             if (recordIndex.startsWith('added-')) {
                 const localIdx = parseInt(recordIndex.split('-')[1]);
                 localOverrides.added[localIdx] = newRec;
@@ -721,7 +742,7 @@ function setupEventListeners() {
                 localOverrides.edited[idx] = newRec;
             }
         } else {
-            // ADD Mode
+            // ADD Mode (fallback local storage)
             localOverrides.added.push(newRec);
         }
         
@@ -828,7 +849,7 @@ function setupEventListeners() {
  * Generate Raw CSV String representing current unified database
  */
 function generateExportCSVText() {
-    const csvRows = [["時間", "地點", "餐廳/美食"]];
+    const csvRows = [["時間", "地點", "餐廳/美食", "Full Address", "Latitude", "Longitude"]];
     
     // Iterate base records + overrides in logical sorted index order
     // To restore original layout sequence, sort active database by date ascending
@@ -839,7 +860,24 @@ function generateExportCSVText() {
     chronologicalAll.forEach(rec => {
         // Enclose in quotes if field contains commas to comply with CSV standard
         const cleanFood = rec.food.includes(',') || rec.food.includes('，') ? `"${rec.food}"` : rec.food;
-        csvRows.push([rec.date, rec.location, cleanFood]);
+        
+        // Find coordinates from record or fallback to coordsDb
+        const key = `${rec.location}|${rec.food}`;
+        let lat = rec.lat || '';
+        let lng = rec.lng || '';
+        if (!lat || !lng) {
+            const coord = coordsDb[key];
+            if (coord && coord.lat && coord.lng) {
+                lat = coord.lat;
+                lng = coord.lng;
+            }
+        }
+        
+        // Create full address by combining location and food, and escape commas if needed
+        const rawAddress = `${rec.location} ${rec.food}`;
+        const cleanAddress = rawAddress.includes(',') || rawAddress.includes('，') ? `"${rawAddress}"` : rawAddress;
+        
+        csvRows.push([rec.date, rec.location, cleanFood, cleanAddress, lat, lng]);
     });
     
     const csvContent = csvRows.map(row => row.join(',')).join('\n');
