@@ -316,6 +316,34 @@ function parseDate(dateStr) {
 }
 
 /**
+ * Helper: Format any date string to clean YYYY/MM/DD display format.
+ * Prevents GMT or long timestamp strings from cluttering the UI.
+ */
+function formatDateToDisplay(dateStr) {
+    if (!dateStr) return '';
+    
+    const trimmed = dateStr.trim();
+    // Check if it's already in clean yy/mm/dd or yyyy/mm/dd format and has no GMT/alphabetic chars
+    const cleanPattern = /^\d{2,4}\/\d{2}\/\d{2}$/;
+    if (cleanPattern.test(trimmed)) {
+        if (trimmed.length === 8) {
+            return `20${trimmed}`;
+        }
+        return trimmed;
+    }
+    
+    const dateObj = parseDate(trimmed);
+    if (isNaN(dateObj.getTime()) || dateObj.getTime() === 0) {
+        return trimmed;
+    }
+    
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    return `${yyyy}/${mm}/${dd}`;
+}
+
+/**
  * Render Header Statistics Dashboard
  */
 function renderStats(records) {
@@ -396,7 +424,7 @@ function renderCardsList(records) {
         card.innerHTML = `
             <div class="card-header-row">
                 <div class="card-badges">
-                    <span class="date-badge">20${rec.date}</span>
+                    <span class="date-badge">${formatDateToDisplay(rec.date)}</span>
                     <span class="location-tag ${homeClass}">
                         ${homeIcon} <span>${rec.location}</span>
                     </span>
@@ -475,26 +503,69 @@ function saveOverridesAndRender() {
 /**
  * Delete a food record
  */
-window.deleteRecord = function(recordIndex) {
+window.deleteRecord = async function(recordIndex) {
     if (!confirm("確定要刪除這筆美食足跡嗎？")) return;
     
+    const customGasUrl = (HARDCODED_GAS_URL && HARDCODED_GAS_URL !== '您的_GOOGLE_APPS_SCRIPT_API_網址') 
+        ? HARDCODED_GAS_URL 
+        : (localStorage.getItem(STORAGE_GAS_URL_KEY) || '');
+        
     if (recordIndex.startsWith('added-')) {
-        // Deleting a newly added record
+        // Deleting a newly added local record
         const localIdx = parseInt(recordIndex.split('-')[1]);
         localOverrides.added.splice(localIdx, 1);
+        saveOverridesAndRender();
     } else {
         // Deleting a base record
         const idx = parseInt(recordIndex);
+        const rec = baseRecords.find(r => r.index === idx);
+        
+        if (customGasUrl && rec) {
+            try {
+                console.log(`Deleting record from Google Sheets via GAS index: ${idx}`, rec);
+                const payload = {
+                    action: "delete",
+                    index: idx,
+                    date: rec.date,
+                    location: rec.location,
+                    food: rec.food
+                };
+                
+                const response = await fetch(customGasUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                console.log("Delete request sent successfully to Google Sheets!");
+                
+                // Clear any local overrides for this record
+                if (localOverrides.edited[idx]) {
+                    delete localOverrides.edited[idx];
+                }
+                
+                // Fetch live data immediately from Google Sheets
+                await loadDataAndRender();
+                alert("🎉 成功！美食足跡已從您的 Google 試算表中刪除！");
+                return;
+            } catch (err) {
+                console.error("Failed to delete from Google Sheets:", err);
+                alert("⚠️ 連線更新 Google 試算表失敗，已改為先在您的本機網頁快取中刪除！");
+            }
+        }
+        
+        // Fallback local deletion
         if (!localOverrides.deleted.includes(idx)) {
             localOverrides.deleted.push(idx);
         }
-        // Remove from edits if it was there
         if (localOverrides.edited[idx]) {
             delete localOverrides.edited[idx];
         }
+        saveOverridesAndRender();
     }
-    
-    saveOverridesAndRender();
 };
 
 /**
@@ -526,7 +597,9 @@ window.openEditModal = function(recordIndex) {
         }
         
         if (rec) {
-            document.getElementById('form-date').value = rec.date;
+            // Clean date format for input field (convert YYYY/MM/DD to YY/MM/DD)
+            const displayD = formatDateToDisplay(rec.date);
+            document.getElementById('form-date').value = displayD.startsWith("20") ? displayD.substring(2) : displayD;
             document.getElementById('form-location').value = rec.location;
             document.getElementById('form-food').value = rec.food;
             
