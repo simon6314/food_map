@@ -103,10 +103,10 @@ function setMapTheme(theme) {
 function createCustomIcon(type, isHighlighted = false, frequency = 1) {
     const highlightClass = isHighlighted ? 'highlighted' : '';
     
-    // Calculate dynamic parameters based on frequency
-    const f = Math.max(1, frequency);
-    const scale = Math.min(0.8 + Math.log10(f) * 1.2, 3.2);
-    const opacity = Math.min(0.35 + Math.log10(f) * 0.3, 0.95); // slightly higher base opacity for static glow
+    // Calculate dynamic parameters based on frequency (Capped at 50 to avoid oversized glow on mobile)
+    const f = Math.min(Math.max(1, frequency), 50);
+    const scale = Math.min(0.8 + Math.log10(f) * 0.8, 2.0);
+    const opacity = Math.min(0.35 + Math.log10(f) * 0.35, 0.95); // slightly higher base opacity for static glow
     const coreSize = Math.min(8 + Math.log10(f) * 6, 18);
     
     // Set custom CSS variables for keyframes and core size
