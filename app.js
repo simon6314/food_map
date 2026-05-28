@@ -391,12 +391,28 @@ function renderCardsList(records) {
     }
     noResults.classList.add('hidden');
     
+    // Find absolute champion location in the entire activeRecords dataset to mark with a crown
+    const locCounts = {};
+    activeRecords.forEach(r => {
+        const cleanLoc = r.location.trim();
+        if (cleanLoc) {
+            locCounts[cleanLoc] = (locCounts[cleanLoc] || 0) + 1;
+        }
+    });
+    const sortedActiveLocs = Object.keys(locCounts).sort((a,b) => locCounts[b] - locCounts[a]);
+    const championLoc = sortedActiveLocs[0];
+    const maxVisits = championLoc ? locCounts[championLoc] : 0;
+    
     records.forEach(rec => {
         const key = `${rec.location}|${rec.food}`;
         const coord = coordsDb[key];
         const isHome = rec.location.includes("家");
         const homeClass = isHome ? 'home-tag' : '';
         const homeIcon = isHome ? '<i data-lucide="home" style="width:0.85rem;height:0.85rem;"></i>' : '<i data-lucide="map-pin" style="width:0.85rem;height:0.85rem;"></i>';
+        
+        // Show golden crown if this location is the champion spot (with more than 1 visit)
+        const isChampion = rec.location === championLoc && maxVisits > 1;
+        const crownHtml = isChampion ? '<span style="color:#eab308;margin-left:0.25rem;" title="冠軍踩點熱點！👑">👑</span>' : '';
         
         // Clean restaurant name and check for comments in parentheses
         let shopName = rec.food;
@@ -426,7 +442,7 @@ function renderCardsList(records) {
                 <div class="card-badges">
                     <span class="date-badge">${formatDateToDisplay(rec.date)}</span>
                     <span class="location-tag ${homeClass}">
-                        ${homeIcon} <span>${rec.location}</span>
+                        ${homeIcon} <span>${rec.location}${crownHtml}</span>
                     </span>
                 </div>
             </div>
@@ -1181,13 +1197,17 @@ function updateStatsDetails() {
             const homeClass = isHome ? 'home-tag' : '';
             const iconName = isHome ? 'home' : 'map-pin';
             
+            // First item in sortedLocs (which has max count) gets the champion crown in the details list
+            const isChampion = (loc === sortedLocs[0] && count > 1);
+            const crownHtml = isChampion ? '<span style="color:#eab308;margin-left:0.25rem;" title="冠軍足跡地點！👑">👑</span>' : '';
+            
             const item = document.createElement('div');
             item.className = `details-tag ${homeClass} ${isFilterActive ? 'active' : ''}`;
             item.style = 'cursor: pointer;' + (isFilterActive ? 'border-color: var(--secondary) !important; background-color: var(--secondary-light) !important; box-shadow: 0 0 8px rgba(17, 118, 110, 0.2);' : '');
             item.innerHTML = `
                 <span style="display:flex;align-items:center;gap:0.3rem;">
                     <i data-lucide="${iconName}" style="width:0.75rem;height:0.75rem;"></i>
-                    <span>${loc}</span>
+                    <span>${loc}${crownHtml}</span>
                 </span>
                 <span class="details-tag-count">${count}次</span>
             `;

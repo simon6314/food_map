@@ -100,14 +100,15 @@ function setMapTheme(theme) {
 /**
  * Create Custom Pulsing DivIcon
  */
-function createCustomIcon(type, isHighlighted = false, frequency = 1) {
+function createCustomIcon(type, isHighlighted = false, frequency = 1, isChampion = false) {
     const highlightClass = isHighlighted ? 'highlighted' : '';
+    const championClass = isChampion ? 'champion' : '';
     
-    // Calculate dynamic parameters based on frequency (Capped at 50 to avoid oversized glow on mobile)
+    // Calculate dynamic parameters based on frequency (Capped at 50, even more compact sizing)
     const f = Math.min(Math.max(1, frequency), 50);
-    const scale = Math.min(0.8 + Math.log10(f) * 0.8, 2.0);
+    const scale = Math.min(0.6 + Math.log10(f) * 0.5, 1.4);
     const opacity = Math.min(0.35 + Math.log10(f) * 0.35, 0.95); // slightly higher base opacity for static glow
-    const coreSize = Math.min(8 + Math.log10(f) * 6, 18);
+    const coreSize = Math.min(6 + Math.log10(f) * 4, 12);
     
     // Set custom CSS variables for keyframes and core size
     const styleString = `
@@ -116,9 +117,12 @@ function createCustomIcon(type, isHighlighted = false, frequency = 1) {
         --freq-core-size: ${coreSize}px;
     `;
     
+    const crownHtml = isChampion ? '<div class="marker-crown">👑</div>' : '';
+    
     return L.divIcon({
         html: `
-            <div class="custom-pulsing-marker ${highlightClass}" style="${styleString}">
+            <div class="custom-pulsing-marker ${highlightClass} ${championClass}" style="${styleString}">
+                ${crownHtml}
                 <div class="marker-glow-area ${type}"></div>
                 <div class="marker-core ${type}"></div>
             </div>
@@ -194,18 +198,32 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
     
     const validMarkers = [];
     
+    // Find the maximum frequency among all coordinate groups to identify the champion
+    let maxFreq = 0;
+    let championLocationName = "";
+    Object.values(locationGroups).forEach((group) => {
+        const freq = group.records.length;
+        if (freq > maxFreq) {
+            maxFreq = freq;
+            championLocationName = group.location;
+        }
+    });
+    
     // Plot one marker per unique coordinate group
     Object.values(locationGroups).forEach((group) => {
         const frequency = group.records.length;
+        // Only make it a champion if they have visited more than once
+        const isChampion = (group.location === championLocationName && frequency > 1);
         
         // Create L.marker
         const marker = L.marker([group.lat, group.lng], {
-            icon: createCustomIcon(group.type, false, frequency),
+            icon: createCustomIcon(group.type, false, frequency, isChampion),
             title: `${group.location} - 共 ${frequency} 次足跡`
         });
         
-        // Store frequency on marker object for highlighted toggle
+        // Store metadata on marker object for highlighted toggle
         marker.recordFrequency = frequency;
+        marker.isChampionLocation = isChampion;
         
         // Map all records in this group to this marker
         group.records.forEach((rec) => {
@@ -323,8 +341,9 @@ function highlightMapMarker(recordIndex, isHighlighted = true) {
     // Fallback is default restaurant
     const type = marker.options.title.includes("家") ? "home" : "restaurant";
     const frequency = marker.recordFrequency || 1;
+    const isChampion = marker.isChampionLocation || false;
     
-    marker.setIcon(createCustomIcon(type, isHighlighted, frequency));
+    marker.setIcon(createCustomIcon(type, isHighlighted, frequency, isChampion));
     
     if (isHighlighted) {
         // Bring marker to front

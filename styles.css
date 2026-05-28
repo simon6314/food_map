@@ -1169,6 +1169,25 @@ body.dark-mode .marker-glow-area.fallback {
     opacity: 0.95 !important;
 }
 
+/* 👑 Champion Crown Map Marker Style */
+.marker-crown {
+    position: absolute;
+    top: -20px;
+    font-size: 18px;
+    z-index: 15;
+    animation: crownBounce 2.2s infinite ease-in-out;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+@keyframes crownBounce {
+    0%, 100% {
+        transform: translateY(0) scale(1);
+    }
+    50% {
+        transform: translateY(-5px) scale(1.1);
+    }
+}
+
 /* ==========================================================================
    9. RESPONSIVE MEDIA QUERIES (Mobile-First Layout Adaptations)
    ========================================================================== */
