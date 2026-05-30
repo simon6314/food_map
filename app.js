@@ -28,7 +28,7 @@ try {
         }
     };
 }
-const localStorage = localStorageInstance;
+const safeStorage = localStorageInstance;
 
 // Base records loaded from CSV
 let baseRecords = [];
@@ -65,7 +65,7 @@ const HARDCODED_GAS_URL = 'https://script.google.com/macros/s/AKfycbxzj9GLRhG0nf
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Initialize Leaflet Map
-    const savedTheme = localStorage.getItem('food_map_theme') || 'light';
+    const savedTheme = safeStorage.getItem('food_map_theme') || 'light';
     document.body.className = savedTheme + '-mode';
     initMap(savedTheme);
     
@@ -96,7 +96,7 @@ async function loadCoordsDb() {
         coordsDb = await response.json();
         
         // Merge with local coordinates overrides
-        const savedCoords = localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY);
+        const savedCoords = safeStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY);
         if (savedCoords) {
             try {
                 const overrides = JSON.parse(savedCoords);
@@ -119,12 +119,12 @@ async function loadDataAndRender() {
     // 1. Get Google Sheets Apps Script URL (hardcoded has priority, fallback to local storage)
     const customGasUrl = (HARDCODED_GAS_URL && HARDCODED_GAS_URL !== '您的_GOOGLE_APPS_SCRIPT_API_網址') 
         ? HARDCODED_GAS_URL 
-        : (localStorage.getItem(STORAGE_GAS_URL_KEY) || '');
+        : (safeStorage.getItem(STORAGE_GAS_URL_KEY) || '');
         
-    const customSheetUrl = localStorage.getItem(STORAGE_SHEET_URL_KEY);
+    const customSheetUrl = safeStorage.getItem(STORAGE_SHEET_URL_KEY);
     
     // 2. Load LocalStorage Overrides
-    const savedOverrides = localStorage.getItem(STORAGE_OVERRIDES_KEY);
+    const savedOverrides = safeStorage.getItem(STORAGE_OVERRIDES_KEY);
     if (savedOverrides) {
         try {
             localOverrides = JSON.parse(savedOverrides);
@@ -134,12 +134,21 @@ async function loadDataAndRender() {
     }
     
     try {
+        let loadedFromGas = false;
+        
         if (customGasUrl) {
-            console.log(`Fetching real-time JSON from GAS API: ${customGasUrl}`);
-            const response = await fetch(customGasUrl);
-            baseRecords = await response.json();
-            console.log(`Loaded ${baseRecords.length} real-time records from Google Sheets.`);
-        } else {
+            try {
+                console.log(`Fetching real-time JSON from GAS API: ${customGasUrl}`);
+                const response = await fetch(customGasUrl);
+                baseRecords = await response.json();
+                console.log(`Loaded ${baseRecords.length} real-time records from Google Sheets.`);
+                loadedFromGas = true;
+            } catch (gasErr) {
+                console.warn("GAS API fetch failed or redirected. Falling back to static/published CSV:", gasErr);
+            }
+        }
+        
+        if (!loadedFromGas) {
             let csvUrl = customSheetUrl || DEFAULT_CSV_PATH;
             
             // Automatically convert a standard Google Sheets browser URL to a raw CSV export link
@@ -542,7 +551,7 @@ window.highlightTimelineCard = function(recordIndex) {
  * Save Overrides to Local Storage and re-render
  */
 function saveOverridesAndRender() {
-    localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(localOverrides));
+    safeStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(localOverrides));
     mergeRecords();
     applyFiltersAndRender(false); // don't animate line path on minor CRUD update to prevent flickering
 }
@@ -555,7 +564,7 @@ window.deleteRecord = async function(recordIndex) {
     
     const customGasUrl = (HARDCODED_GAS_URL && HARDCODED_GAS_URL !== '您的_GOOGLE_APPS_SCRIPT_API_網址') 
         ? HARDCODED_GAS_URL 
-        : (localStorage.getItem(STORAGE_GAS_URL_KEY) || '');
+        : (safeStorage.getItem(STORAGE_GAS_URL_KEY) || '');
         
     if (recordIndex.startsWith('added-')) {
         // Deleting a newly added local record
@@ -715,7 +724,7 @@ function setupEventListeners() {
         const isDark = document.body.classList.contains('dark-mode');
         const newTheme = isDark ? 'light' : 'dark';
         document.body.className = newTheme + '-mode';
-        localStorage.setItem('food_map_theme', newTheme);
+        safeStorage.setItem('food_map_theme', newTheme);
         setMapTheme(newTheme);
     });
     
@@ -830,9 +839,9 @@ function setupEventListeners() {
                     };
                     
                     // Save in LocalStorage overrides
-                    const savedOverrides = JSON.parse(localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
+                    const savedOverrides = JSON.parse(safeStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
                     savedOverrides[key] = coordsDb[key];
-                    localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(savedOverrides));
+                    safeStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(savedOverrides));
                     console.log(`Saved manual coordinates override for: ${key} -> ${lat}, ${lng} -> ${initialAddress}`);
                     
                     // Asynchronously fetch and refine to precise online Nominatim address
@@ -840,10 +849,10 @@ function setupEventListeners() {
                         const onlineAddress = await reverseGeocode(lat, lng);
                         if (onlineAddress) {
                             // Reload overrides from LocalStorage to avoid overwriting newer overrides
-                            const latestOverrides = JSON.parse(localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
+                            const latestOverrides = JSON.parse(safeStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
                             if (latestOverrides[key]) {
                                 latestOverrides[key].address = onlineAddress;
-                                localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(latestOverrides));
+                                safeStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(latestOverrides));
                                 
                                 // Update in-memory coordsDb
                                 if (coordsDb[key]) {
@@ -874,7 +883,7 @@ function setupEventListeners() {
         
         const customGasUrl = (HARDCODED_GAS_URL && HARDCODED_GAS_URL !== '您的_GOOGLE_APPS_SCRIPT_API_網址') 
             ? HARDCODED_GAS_URL 
-            : (localStorage.getItem(STORAGE_GAS_URL_KEY) || '');
+            : (safeStorage.getItem(STORAGE_GAS_URL_KEY) || '');
         
         // If we have Apps Script URL, sync to Google Sheet (either ADD or EDIT of a base record)
         if (customGasUrl && (!recordIndex || !recordIndex.startsWith('added-'))) {
@@ -907,7 +916,7 @@ function setupEventListeners() {
                 // Clear any local edit override since it is now saved in the sheet
                 if (recordIndex) {
                     delete localOverrides.edited[parseInt(recordIndex)];
-                    localStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(localOverrides));
+                    safeStorage.setItem(STORAGE_OVERRIDES_KEY, JSON.stringify(localOverrides));
                 }
                 
                 // Reset save button and close modal
@@ -1373,41 +1382,7 @@ function updateStatsDetails() {
     }
 }
 
-/**
- * Local Reverse Geocoding as instant fallback
- */
-const TAIWAN_CITIES = [
-    { name: "苗栗縣竹南鎮", lat: 24.6853, lng: 120.8753 },
-    { name: "苗栗縣頭份市", lat: 24.6897, lng: 120.9118 },
-    { name: "新竹市東區", lat: 24.7835, lng: 121.0226 },
-    { name: "新竹市北區", lat: 24.8036, lng: 120.9686 },
-    { name: "新竹縣竹北市", lat: 24.8398, lng: 121.0094 },
-    { name: "高雄市新興區", lat: 22.6273, lng: 120.3014 },
-    { name: "台南市中西區", lat: 22.9997, lng: 120.2270 },
-    { name: "台北市信義區", lat: 25.0330, lng: 121.5654 },
-    { name: "新北市板橋區", lat: 25.0120, lng: 121.4657 },
-    { name: "桃園市大溪區", lat: 24.8804, lng: 121.2868 },
-    { name: "嘉義市東區", lat: 23.4844, lng: 120.4416 }
-];
 
-function localReverseGeocode(lat, lng) {
-    let minDistance = Infinity;
-    let nearestCity = "未知區域";
-    
-    TAIWAN_CITIES.forEach(city => {
-        const dist = Math.sqrt(Math.pow(city.lat - lat, 2) + Math.pow(city.lng - lng, 2));
-        if (dist < minDistance) {
-            minDistance = dist;
-            nearestCity = city.name;
-        }
-    });
-    
-    // Only return if it's reasonably close (e.g. within 0.25 degrees, which is ~25km)
-    if (minDistance < 0.25) {
-        return nearestCity;
-    }
-    return "台灣區域";
-}
 
 /**
  * Helper to extract clean county/township/district name from Nominatim address object
@@ -1462,7 +1437,7 @@ async function reverseGeocode(lat, lng) {
  * Scan and retroactively fix historical coordinates overrides
  */
 async function autoFixCoordsAddresses() {
-    const savedCoordsStr = localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY);
+    const savedCoordsStr = safeStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY);
     if (!savedCoordsStr) return;
     
     let overridesChanged = false;
@@ -1509,7 +1484,7 @@ async function autoFixCoordsAddresses() {
     }
     
     if (overridesChanged) {
-        localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(overrides));
+        safeStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(overrides));
     }
     
     // Process online reverse geocoding queue with rate limiting
@@ -1524,10 +1499,10 @@ async function autoFixCoordsAddresses() {
             const realAddress = await reverseGeocode(lat, lng);
             if (realAddress) {
                 // Reload overrides to prevent race conditions
-                const currentOverrides = JSON.parse(localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
+                const currentOverrides = JSON.parse(safeStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
                 if (currentOverrides[key]) {
                     currentOverrides[key].address = realAddress;
-                    localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(currentOverrides));
+                    safeStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(currentOverrides));
                     
                     // Update in-memory database
                     if (coordsDb[key]) {
