@@ -133,6 +133,96 @@ function createCustomIcon(type, isHighlighted = false, frequency = 1, isChampion
     });
 }
 
+/**
+ * Local Reverse Geocoding as instant fallback
+ */
+const TAIWAN_CITIES = [
+    { name: "苗栗縣竹南鎮", lat: 24.6853, lng: 120.8753 },
+    { name: "苗栗縣頭份市", lat: 24.6897, lng: 120.9118 },
+    { name: "新竹市東區", lat: 24.7835, lng: 121.0226 },
+    { name: "新竹市北區", lat: 24.8036, lng: 120.9686 },
+    { name: "新竹縣竹北市", lat: 24.8398, lng: 121.0094 },
+    { name: "新竹縣新豐鄉", lat: 24.8986, lng: 120.9856 },
+    { name: "高雄市新興區", lat: 22.6273, lng: 120.3014 },
+    { name: "高雄市三民區", lat: 22.6432, lng: 120.3298 },
+    { name: "台南市中西區", lat: 22.9997, lng: 120.2270 },
+    { name: "台南市玉井區", lat: 23.1252, lng: 120.4601 },
+    { name: "台北市信義區", lat: 25.0330, lng: 121.5654 },
+    { name: "台北市士林區", lat: 25.0970, lng: 121.5214 },
+    { name: "新北市板橋區", lat: 25.0120, lng: 121.4657 },
+    { name: "新北市新莊區", lat: 25.0359, lng: 121.4457 },
+    { name: "新北市三峽區", lat: 24.9343, lng: 121.3718 },
+    { name: "桃園市大溪區", lat: 24.8804, lng: 121.2868 },
+    { name: "桃園市龍潭區", lat: 24.8624, lng: 121.2162 },
+    { name: "桃園市桃園區", lat: 24.9937, lng: 121.3010 },
+    { name: "桃園市中壢區", lat: 24.9575, lng: 121.2250 },
+    { name: "嘉義市東區", lat: 23.4844, lng: 120.4416 },
+    { name: "台中市南區", lat: 24.1160, lng: 120.6510 },
+    { name: "台中市西屯區", lat: 24.1634, lng: 120.6467 }
+];
+
+function localReverseGeocode(lat, lng) {
+    if (!lat || !lng) return "";
+    let minDistance = Infinity;
+    let nearestCity = "未知區域";
+    
+    TAIWAN_CITIES.forEach(city => {
+        const dist = Math.sqrt(Math.pow(city.lat - lat, 2) + Math.pow(city.lng - lng, 2));
+        if (dist < minDistance) {
+            minDistance = dist;
+            nearestCity = city.name;
+        }
+    });
+    
+    // Only return if it's reasonably close (e.g. within 0.25 degrees, which is ~25km)
+    if (minDistance < 0.25) {
+        return nearestCity;
+    }
+    return "台灣區域";
+}
+
+/**
+ * Format address uniformly based on location name and coordinates
+ */
+function formatAddressUniform(location, lat, lng, rawAddress = "") {
+    if (!location) return "";
+    
+    // 1. If it's a home location
+    if (location.includes("家")) {
+        const homeCoords = getHomeCoordinates(location);
+        return homeCoords ? homeCoords.address : location;
+    }
+    
+    // 2. If location is Japan
+    if (location.includes("日本")) {
+        return "日本大阪";
+    }
+    
+    // 3. Check if rawAddress already has clean county/township/district resolved
+    if (rawAddress && 
+        rawAddress !== "手動校正位置" && 
+        rawAddress !== "手動定位" && 
+        !rawAddress.includes("手動") &&
+        (rawAddress.includes("縣") || rawAddress.includes("市")) &&
+        (rawAddress.includes("區") || rawAddress.includes("鎮") || rawAddress.includes("鄉") || rawAddress.includes("市"))) {
+        
+        // Extract the clean part (e.g. "苗栗縣竹南鎮" from "苗栗縣竹南鎮 (NU Pasta)")
+        const match = rawAddress.match(/^([^(\s]+)/);
+        if (match && match[1]) {
+            return match[1].trim();
+        }
+        return rawAddress.split('(')[0].trim();
+    }
+    
+    // 4. Otherwise use coordinates to geocode
+    if (lat && lng) {
+        return localReverseGeocode(lat, lng);
+    }
+    
+    // 5. Fallback to location
+    return location;
+}
+
 /*/**
  * Render Markers on Map
  * @param {Array} records - Filtered and sorted records
@@ -248,7 +338,7 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
                 </div>
                 ${noteText}
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top:0.4rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:0.3rem;">
-                    🏢 ${group.address || rec.location}
+                    🏢 ${formatAddressUniform(group.location, group.lat, group.lng, group.address)}
                 </div>
                 <a href="${mapsLink}" target="_blank" class="map-popup-link">
                     <i data-lucide="map"></i> <span>在 Google 地圖中開啟</span>

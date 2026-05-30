@@ -55,6 +55,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }
+    
+    // 6. Trigger background auto-fix for historic coordinates addresses
+    autoFixCoordsAddresses();
 });
 
 /**
@@ -430,8 +433,9 @@ function renderCardsList(records) {
         const searchLoc = isHome ? rec.location : `${rec.location} ${cleanShop}`;
         const gmapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchLoc)}`;
         
-        const addressText = coord && coord.address ? 
-            `<div class="card-address"><i data-lucide="compass"></i> <span>${coord.address}</span></div>` : '';
+        const cleanAddress = formatAddressUniform(rec.location, coord ? coord.lat : null, coord ? coord.lng : null, coord ? coord.address : "");
+        const addressText = cleanAddress ? 
+            `<div class="card-address"><i data-lucide="compass"></i> <span>${cleanAddress}</span></div>` : '';
             
         // Build card HTML
         const card = document.createElement('div');
@@ -781,17 +785,20 @@ function setupEventListeners() {
             newRec.lat = homeCoords.lat;
             newRec.lng = homeCoords.lng;
             coordsDb[key] = homeCoords;
-        } else if (coordsInput) {
+                } else if (coordsInput) {
             const coordParts = coordsInput.split(/[，,]/);
             if (coordParts.length === 2) {
                 const lat = parseFloat(coordParts[0].trim());
                 const lng = parseFloat(coordParts[1].trim());
                 if (!isNaN(lat) && !isNaN(lng)) {
+                    // Determine initial address (using instant local lookup fallback)
+                    const initialAddress = localReverseGeocode(lat, lng);
+                    
                     // Save in current memory
                     coordsDb[key] = {
                         lat: lat,
                         lng: lng,
-                        address: "手動校正位置",
+                        address: initialAddress,
                         type: "restaurant"
                     };
                     
@@ -799,7 +806,27 @@ function setupEventListeners() {
                     const savedOverrides = JSON.parse(localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
                     savedOverrides[key] = coordsDb[key];
                     localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(savedOverrides));
-                    console.log(`Saved manual coordinates override for: ${key} -> ${lat}, ${lng}`);
+                    console.log(`Saved manual coordinates override for: ${key} -> ${lat}, ${lng} -> ${initialAddress}`);
+                    
+                    // Asynchronously fetch and refine to precise online Nominatim address
+                    (async () => {
+                        const onlineAddress = await reverseGeocode(lat, lng);
+                        if (onlineAddress) {
+                            // Reload overrides from LocalStorage to avoid overwriting newer overrides
+                            const latestOverrides = JSON.parse(localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
+                            if (latestOverrides[key]) {
+                                latestOverrides[key].address = onlineAddress;
+                                localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(latestOverrides));
+                                
+                                // Update in-memory coordsDb
+                                if (coordsDb[key]) {
+                                    coordsDb[key].address = onlineAddress;
+                                }
+                                console.log(`Asynchronously refined coordinate address to: ${onlineAddress}`);
+                                applyFiltersAndRender(false);
+                            }
+                        }
+                    })();
                     
                     // Put coordinates into newRec for posting to Google Sheets!
                     newRec.lat = lat;
@@ -1316,5 +1343,177 @@ function updateStatsDetails() {
             attrs: { class: ['lucide'] },
             node: titleEl
         });
+    }
+}
+
+/**
+ * Local Reverse Geocoding as instant fallback
+ */
+const TAIWAN_CITIES = [
+    { name: "苗栗縣竹南鎮", lat: 24.6853, lng: 120.8753 },
+    { name: "苗栗縣頭份市", lat: 24.6897, lng: 120.9118 },
+    { name: "新竹市東區", lat: 24.7835, lng: 121.0226 },
+    { name: "新竹市北區", lat: 24.8036, lng: 120.9686 },
+    { name: "新竹縣竹北市", lat: 24.8398, lng: 121.0094 },
+    { name: "高雄市新興區", lat: 22.6273, lng: 120.3014 },
+    { name: "台南市中西區", lat: 22.9997, lng: 120.2270 },
+    { name: "台北市信義區", lat: 25.0330, lng: 121.5654 },
+    { name: "新北市板橋區", lat: 25.0120, lng: 121.4657 },
+    { name: "桃園市大溪區", lat: 24.8804, lng: 121.2868 },
+    { name: "嘉義市東區", lat: 23.4844, lng: 120.4416 }
+];
+
+function localReverseGeocode(lat, lng) {
+    let minDistance = Infinity;
+    let nearestCity = "未知區域";
+    
+    TAIWAN_CITIES.forEach(city => {
+        const dist = Math.sqrt(Math.pow(city.lat - lat, 2) + Math.pow(city.lng - lng, 2));
+        if (dist < minDistance) {
+            minDistance = dist;
+            nearestCity = city.name;
+        }
+    });
+    
+    // Only return if it's reasonably close (e.g. within 0.25 degrees, which is ~25km)
+    if (minDistance < 0.25) {
+        return nearestCity;
+    }
+    return "台灣區域";
+}
+
+/**
+ * Helper to extract clean county/township/district name from Nominatim address object
+ */
+function extractAreaName(addrObj) {
+    if (!addrObj) return "";
+    
+    const county = addrObj.county || addrObj.state || ""; // e.g. "苗栗縣"
+    const city = addrObj.city || ""; // e.g. "新竹市"
+    const district = addrObj.town || addrObj.suburb || addrObj.city_district || addrObj.district || addrObj.village || "";
+    
+    let region = "";
+    if (county) {
+        region += county;
+    } else if (city) {
+        region += city;
+    }
+    
+    if (district) {
+        region += district;
+    }
+    
+    // Clean up country or postcode
+    region = region.replace("台灣", "").replace("臺灣", "").trim();
+    
+    return region || addrObj.road || "未知區域";
+}
+
+/**
+ * Online Reverse Geocoding using Nominatim
+ */
+async function reverseGeocode(lat, lng) {
+    try {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=zh-TW`;
+        const response = await fetch(url, {
+            headers: {
+                'Accept-Language': 'zh-TW'
+            }
+        });
+        if (!response.ok) throw new Error('Nominatim request failed');
+        const data = await response.json();
+        if (data && data.address) {
+            return extractAreaName(data.address);
+        }
+    } catch (err) {
+        console.error("Reverse geocoding failed:", err);
+    }
+    return null;
+}
+
+/**
+ * Scan and retroactively fix historical coordinates overrides
+ */
+async function autoFixCoordsAddresses() {
+    const savedCoordsStr = localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY);
+    if (!savedCoordsStr) return;
+    
+    let overridesChanged = false;
+    let overrides = {};
+    try {
+        overrides = JSON.parse(savedCoordsStr);
+    } catch (e) {
+        return;
+    }
+    
+    const keysToFix = [];
+    
+    for (const key in overrides) {
+        const item = overrides[key];
+        const locationName = key.split('|')[0];
+        const isHome = locationName.includes("家");
+        const homeCoords = getHomeCoordinates(locationName);
+        
+        // Check if address needs fixing (if it contains "手動" or is generic/missing)
+        const needsFix = !item.address || 
+                          item.address === "手動校正位置" || 
+                          item.address === "手動定位" || 
+                          item.address.includes("手動");
+        
+        if (needsFix) {
+            if (isHome && homeCoords) {
+                // Fix with home calibrated address
+                overrides[key] = {
+                    ...item,
+                    address: homeCoords.address,
+                    type: "home"
+                };
+                overridesChanged = true;
+                coordsDb[key] = overrides[key];
+            } else if (item.lat && item.lng) {
+                // Apply instant local reverse geocode to coordsDb in memory first so it displays instantly
+                const localAddr = localReverseGeocode(item.lat, item.lng);
+                coordsDb[key].address = localAddr;
+                
+                // Add to online queue for precise details
+                keysToFix.push({ key, lat: item.lat, lng: item.lng });
+            }
+        }
+    }
+    
+    if (overridesChanged) {
+        localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(overrides));
+    }
+    
+    // Process online reverse geocoding queue with rate limiting
+    if (keysToFix.length > 0) {
+        console.log(`Queueing ${keysToFix.length} historical coords for online geocoding...`);
+        for (let i = 0; i < keysToFix.length; i++) {
+            const { key, lat, lng } = keysToFix[i];
+            
+            // Wait 1.5 seconds between requests to comply with Nominatim policy
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            const realAddress = await reverseGeocode(lat, lng);
+            if (realAddress) {
+                // Reload overrides to prevent race conditions
+                const currentOverrides = JSON.parse(localStorage.getItem(STORAGE_COORDS_OVERRIDES_KEY) || '{}');
+                if (currentOverrides[key]) {
+                    currentOverrides[key].address = realAddress;
+                    localStorage.setItem(STORAGE_COORDS_OVERRIDES_KEY, JSON.stringify(currentOverrides));
+                    
+                    // Update in-memory database
+                    if (coordsDb[key]) {
+                        coordsDb[key].address = realAddress;
+                    }
+                    
+                    console.log(`Retroactively resolved coordinate address for: ${key} -> ${realAddress}`);
+                }
+            }
+        }
+        // Apply filters and re-render map so updated addresses display immediately without refresh!
+        if (typeof applyFiltersAndRender === 'function') {
+            applyFiltersAndRender(false);
+        }
     }
 }
