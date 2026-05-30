@@ -3,6 +3,33 @@
    Manages CSV data parsing, state overrides, search, UI rendering, and CRUD operations.
    ========================================================================== */
 
+// Safe LocalStorage Fallback for Incognito / file:// protocol
+let localStorageInstance = null;
+try {
+    localStorageInstance = window.localStorage;
+    const testKey = '__storage_test__';
+    localStorageInstance.setItem(testKey, testKey);
+    localStorageInstance.removeItem(testKey);
+} catch (e) {
+    console.warn("LocalStorage is blocked by browser security (Incognito or file://). Using in-memory fallback.");
+    const memoryStorage = {};
+    localStorageInstance = {
+        getItem(key) {
+            return memoryStorage[key] !== undefined ? memoryStorage[key] : null;
+        },
+        setItem(key, value) {
+            memoryStorage[key] = String(value);
+        },
+        removeItem(key) {
+            delete memoryStorage[key];
+        },
+        clear() {
+            for (const key in memoryStorage) delete memoryStorage[key];
+        }
+    };
+}
+const localStorage = localStorageInstance;
+
 // Base records loaded from CSV
 let baseRecords = [];
 // Overrides saved in Local Storage (to merge with base records)
