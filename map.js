@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Our Food Map - Leaflet Map Controller (map.js)
    Controls map initialization, tile themes, marker rendering, and polyline animations.
    ========================================================================== */
@@ -872,20 +872,11 @@ function highlightMapMarker(recordIndex, isHighlighted = true) {
 /**
  * Focus and zoom in on a specific marker
  */
-function focusMarker(recordIndex, coordsDb, key) {
+function focusMarker(recordIndex, lat, lng) {
     const marker = mapMarkers[recordIndex];
-    const loc = key.split('|')[0];
     
-    let coord = null;
-    const homeCoords = getHomeCoordinates(loc);
-    if (homeCoords) {
-        coord = homeCoords;
-    } else {
-        coord = coordsDb[key];
-    }
-    
-    if (coord && coord.lat && coord.lng) {
-        map.flyTo([coord.lat, coord.lng], 16, {
+    if (lat && lng) {
+        map.flyTo([lat, lng], 16, {
             duration: 1.2
         });
         

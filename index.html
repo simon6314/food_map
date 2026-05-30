@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     
     <!-- Custom Stylesheet -->
-    <link rel="stylesheet" href="styles.css?v=2.2">
+    <link rel="stylesheet" href="styles.css?v=3.0">
 </head>
 <body class="light-mode">
 
@@ -192,9 +192,14 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="form-coords">地圖定位座標 (選填，格式為：緯度, 經度)</label>
+                    <label for="form-coords" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>地圖定位座標 (選填，格式為：緯度, 經度)</span>
+                        <button type="button" id="btn-search-online-coords" style="background: none; border: none; padding: 0; color: var(--primary); font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.2rem; transition: color 0.2s;" title="以店家名稱線上搜尋最精準經緯度">
+                            <i data-lucide="search" style="width: 0.85rem; height: 0.85rem;"></i><span>🔍 搜尋線上定位</span>
+                        </button>
+                    </label>
                     <input type="text" id="form-coords" placeholder="例如：24.6853, 120.8753">
-                    <span class="form-help">如果地圖上預設定位不準，可在 Google 地圖上右鍵點擊該位置複製經緯度貼於此進行校準。</span>
+                    <span class="form-help">點擊右上角「🔍 搜尋線上定位」，能根據您輸入的地區和餐廳名稱，線上自動尋找最精準的經緯度座標！</span>
                 </div>
                 
                 <div class="form-actions">
@@ -272,7 +277,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
     <!-- Custom Web App Logic Scripts -->
-    <script src="map.js?v=2.3"></script>
-    <script src="app.js?v=2.3"></script>
+    <script src="map.js?v=3.0"></script>
+    <script src="app.js?v=3.0"></script>
 </body>
 </html>

@@ -464,12 +464,32 @@ function renderCardsList(records) {
             shopName = rec.food.replace(bracketMatch[0], "").trim();
         }
         
+        // Find accurate coordinates for this record card (home calibrated, sheet direct coords, or coordsDb)
+        let lat = null;
+        let lng = null;
+        let address = "";
+        
+        const homeCoords = getHomeCoordinates(rec.location);
+        if (homeCoords) {
+            lat = homeCoords.lat;
+            lng = homeCoords.lng;
+            address = homeCoords.address;
+        } else if (rec.lat && rec.lng) {
+            lat = parseFloat(rec.lat);
+            lng = parseFloat(rec.lng);
+            address = "Google 試算表直接定位";
+        } else if (coord) {
+            lat = coord.lat;
+            lng = coord.lng;
+            address = coord.address || "";
+        }
+        
         // Setup direct Google Maps Link
         const cleanShop = shopName.split(/[，,]/)[0].trim();
         const searchLoc = isHome ? rec.location : `${rec.location} ${cleanShop}`;
-        const gmapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchLoc)}`;
+        const gmapsLink = (lat && lng) ? `https://www.google.com/maps/search/?api=1&query=${lat},${lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(searchLoc)}`;
         
-        const cleanAddress = formatAddressUniform(rec.location, coord ? coord.lat : null, coord ? coord.lng : null, coord ? coord.address : "");
+        const cleanAddress = formatAddressUniform(rec.location, lat, lng, address);
         const addressText = cleanAddress ? 
             `<div class="card-address"><i data-lucide="compass"></i> <span>${cleanAddress}</span></div>` : '';
             
@@ -514,7 +534,7 @@ function renderCardsList(records) {
         
         // Focus on map point on click
         card.addEventListener('click', () => {
-            focusMarker(rec.index, coordsDb, key);
+            focusMarker(rec.index, lat, lng);
             // Visual highlight active card
             document.querySelectorAll('.food-card').forEach(c => c.classList.remove('active-highlight'));
             card.classList.add('active-highlight');
@@ -659,11 +679,13 @@ window.openEditModal = function(recordIndex) {
             document.getElementById('form-location').value = rec.location;
             document.getElementById('form-food').value = rec.food;
             
-            // Pre-fill custom coordinates if they exist in coordsDb
+            // Pre-fill custom coordinates if they exist in record or coordsDb
             const key = `${rec.location}|${rec.food}`;
             const homeCoords = getHomeCoordinates(rec.location);
             if (homeCoords) {
                 document.getElementById('form-coords').value = `${homeCoords.lat.toFixed(6)}, ${homeCoords.lng.toFixed(6)}`;
+            } else if (rec.lat && rec.lng) {
+                document.getElementById('form-coords').value = `${parseFloat(rec.lat).toFixed(6)}, ${parseFloat(rec.lng).toFixed(6)}`;
             } else {
                 const coord = coordsDb[key];
                 if (coord && coord.lat && coord.lng) {
@@ -995,6 +1017,287 @@ function setupEventListeners() {
     
     // 13. Setup clickable statistics details listeners
     setupStatsDetails();
+    
+    // 14. Auto-prefill coordinates when location name is typed or selected in the modal
+    const inputLoc = document.getElementById('form-location');
+    const inputCoords = document.getElementById('form-coords');
+    
+    if (inputLoc && inputCoords) {
+        const handleLocationInput = () => {
+            const val = inputLoc.value.trim();
+            if (!val) return;
+            
+            // A. Check cozy home location
+            const homeCoords = getHomeCoordinates(val);
+            if (homeCoords) {
+                inputCoords.value = `${homeCoords.lat.toFixed(6)}, ${homeCoords.lng.toFixed(6)}`;
+                return;
+            }
+            
+            // B. Apply brief mappings
+            const briefMappings = {
+                "公館": "苗栗縣公館鄉",
+                "竹南": "苗栗縣竹南鎮",
+                "頭份": "苗栗縣頭份市",
+                "新竹": "新竹市東區",
+                "大溪": "桃園市大溪區",
+                "新豐": "新竹縣新豐鄉",
+                "竹北": "新竹縣竹北市",
+                "三峽": "新北市三峽區",
+                "中壢": "桃園市中壢區",
+                "龍潭": "桃園市龍潭區",
+                "玉井": "台南市玉井區",
+                "楠梓": "高雄市楠梓區",
+                "左鎮": "台南市左鎮區",
+                "新屋": "桃園市新屋區",
+                "大園": "桃園市大園區",
+                "六甲": "台南市六甲區",
+                "前金": "高雄市前金區",
+                "鳳山": "高雄市鳳山區",
+                "三民": "高雄市三民區",
+                "嘉義": "嘉義市東區",
+                "大阪": "日本大阪",
+                "東京": "日本東京",
+                "京都": "日本京都",
+                "首爾": "韓國首爾",
+                "釜山": "韓國釜山"
+            };
+            
+            let targetName = val;
+            if (briefMappings[val]) {
+                targetName = briefMappings[val];
+            }
+            
+            // C. Search TAIWAN_CITIES for match
+            if (typeof TAIWAN_CITIES !== 'undefined') {
+                // Exact match first
+                let found = TAIWAN_CITIES.find(city => city.name === targetName);
+                if (!found) {
+                    // Try exact match with normalized traditional characters (臺 vs 台)
+                    const normTarget = targetName.replace(/台/g, "臺");
+                    const normTarget2 = targetName.replace(/臺/g, "台");
+                    found = TAIWAN_CITIES.find(city => city.name.replace(/台/g, "臺") === normTarget || city.name.replace(/臺/g, "台") === normTarget2);
+                }
+                if (!found) {
+                    // Partial match (e.g. "公館" matches "苗栗縣公館鄉")
+                    found = TAIWAN_CITIES.find(city => city.name.includes(targetName) || targetName.includes(city.name));
+                }
+                if (!found) {
+                    // Partial match with normalized characters
+                    const normTarget = targetName.replace(/台/g, "臺");
+                    found = TAIWAN_CITIES.find(city => city.name.replace(/台/g, "臺").includes(normTarget));
+                }
+                
+                if (found) {
+                    inputCoords.value = `${found.lat.toFixed(6)}, ${found.lng.toFixed(6)}`;
+                    return;
+                }
+            }
+            
+            // D. Search WORLD_CITIES for match
+            if (typeof WORLD_CITIES !== 'undefined') {
+                let found = WORLD_CITIES.find(city => city.name === targetName || city.name.includes(targetName) || targetName.includes(city.name));
+                if (found) {
+                    inputCoords.value = `${found.lat.toFixed(6)}, ${found.lng.toFixed(6)}`;
+                    return;
+                }
+            }
+        };
+        
+        inputLoc.addEventListener('input', handleLocationInput);
+        inputLoc.addEventListener('change', handleLocationInput);
+    }
+    
+    // 15. Online coordinate search handler when clicking "🔍 搜尋線上定位"
+    const btnSearchOnline = document.getElementById('btn-search-online-coords');
+    if (btnSearchOnline) {
+        btnSearchOnline.addEventListener('click', async () => {
+            const locVal = document.getElementById('form-location').value.trim();
+            const foodVal = document.getElementById('form-food').value.trim();
+            
+            if (!locVal) {
+                alert("⚠️ 請先在上方填寫「地點/地區」名稱！(例如：竹南、頭份、台中)");
+                return;
+            }
+            if (!foodVal) {
+                alert("⚠️ 請先填寫「餐廳名稱 / 美食細節」名稱，以便進行精準定位！");
+                return;
+            }
+            
+            // Clean up notes in brackets/parentheses and commas
+            let cleanFood = foodVal.replace(/（[^）]*）/g, "").replace(/\([^)]*\)/g, "").trim();
+            cleanFood = cleanFood.split(/[，,]/)[0].trim();
+            
+            // Exclude fuzzy "家" suffix from location name to improve search accuracy
+            let cleanLoc = locVal;
+            if (cleanLoc.includes("家")) {
+                const homeCoords = getHomeCoordinates(cleanLoc);
+                if (homeCoords) {
+                    document.getElementById('form-coords').value = `${homeCoords.lat.toFixed(6)}, ${homeCoords.lng.toFixed(6)}`;
+                    alert(`🎉 溫馨的家定位成功！\n\n對應名稱：${cleanLoc}\n經緯度：${homeCoords.lat.toFixed(6)}, ${homeCoords.lng.toFixed(6)}`);
+                    return;
+                }
+                cleanLoc = cleanLoc.replace("家", "").trim();
+            }
+            
+            // B. Check custom landmarks database (for places not in OpenStreetMap like 桐遊柿界)
+            const CUSTOM_LANDMARKS = {
+                "桐遊柿界": { lat: 24.498424, lng: 120.852951, address: "苗栗縣公館鄉館東村12鄰166-6號 (桐遊柿界)" },
+                "桐遊世界": { lat: 24.498424, lng: 120.852951, address: "苗栗縣公館鄉館東村12鄰166-6號 (桐遊柿界 - 諧音校正)" }
+            };
+            
+            if (CUSTOM_LANDMARKS[cleanFood]) {
+                const landmark = CUSTOM_LANDMARKS[cleanFood];
+                document.getElementById('form-coords').value = `${landmark.lat.toFixed(6)}, ${landmark.lng.toFixed(6)}`;
+                alert(`🎉 成功尋找到最佳線上定位！\n\n對應名稱：${landmark.address}\n座標：${landmark.lat.toFixed(6)}, ${landmark.lng.toFixed(6)}`);
+                return;
+            }
+            
+            // Apply brief mappings to expand abbreviation (e.g. "公館" -> "苗栗縣公館鄉", "嘉義" -> "嘉義市東區")
+            const briefMappings = {
+                "公館": "苗栗縣公館鄉",
+                "竹南": "苗栗縣竹南鎮",
+                "頭份": "苗栗縣頭份市",
+                "新竹": "新竹市東區",
+                "大溪": "桃園市大溪區",
+                "新豐": "新竹縣新豐鄉",
+                "竹北": "新竹縣竹北市",
+                "三峽": "新北市三峽區",
+                "中壢": "桃園市中壢區",
+                "龍潭": "桃園市龍潭區",
+                "玉井": "台南市玉井區",
+                "楠梓": "高雄市楠梓區",
+                "左鎮": "台南市左鎮區",
+                "新屋": "桃園市新屋區",
+                "大園": "桃園市大園區",
+                "六甲": "台南市六甲區",
+                "前金": "高雄市前金區",
+                "鳳山": "高雄市鳳山區",
+                "三民": "高雄市三民區",
+                "嘉義": "嘉義市東區"
+            };
+            if (briefMappings[cleanLoc]) {
+                cleanLoc = briefMappings[cleanLoc];
+            }
+            
+            const query = `${cleanLoc} ${cleanFood}`.trim();
+            
+            const originalHtml = btnSearchOnline.innerHTML;
+            btnSearchOnline.disabled = true;
+            btnSearchOnline.innerHTML = '<i data-lucide="loader" class="animate-spin" style="width:0.85rem; height:0.85rem; display:inline-block; animation:spin 1s linear infinite;"></i> <span>搜尋中...</span>';
+            if (typeof lucide !== 'undefined') lucide.createIcons({ node: btnSearchOnline });
+            
+            try {
+                console.log(`Searching online coordinates for: "${query}"`);
+                
+                let foundCoords = null;
+                let foundAddress = "";
+                
+                // 1. Try Premium Google Maps Geocoding via Google Apps Script (GAS) if URL is configured!
+                const hasGasUrl = (HARDCODED_GAS_URL && HARDCODED_GAS_URL !== '您的_GOOGLE_APPS_SCRIPT_API_網址' && !HARDCODED_GAS_URL.includes("xxxx"));
+                if (hasGasUrl) {
+                    try {
+                        const gasGeocodeUrl = `${HARDCODED_GAS_URL}?action=geocode&query=${encodeURIComponent(query)}`;
+                        console.log(`Querying premium Google Maps geocoding via Apps Script bridge: ${gasGeocodeUrl}`);
+                        const gasRes = await fetch(gasGeocodeUrl);
+                        if (gasRes.ok) {
+                            const gasData = await gasRes.json();
+                            if (gasData && gasData.success) {
+                                foundCoords = { lat: gasData.lat, lng: gasData.lng };
+                                foundAddress = gasData.address || query;
+                                console.log(`Successfully geocoded via Google Maps: ${foundAddress} -> [${foundCoords.lat}, ${foundCoords.lng}]`);
+                            }
+                        }
+                    } catch (gasErr) {
+                        console.warn("Google Apps Script Geocoding failed, falling back to open maps:", gasErr);
+                    }
+                }
+                
+                // 2. Fallback to OpenStreetMap (Nominatim) if Google geocoder was not available or failed
+                if (!foundCoords) {
+                    // Determine if it is a foreign search (Japan, Korea, etc.)
+                    const isForeign = locVal.includes("日本") || locVal.includes("韓國") || locVal.includes("國外") || locVal.includes("大阪") || locVal.includes("東京") || locVal.includes("京都") || locVal.includes("首爾") || locVal.includes("釜山");
+                    
+                    let url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=3&accept-language=zh-TW`;
+                    if (!isForeign) {
+                        url += `&countrycodes=tw`; // Force results to be inside Taiwan!
+                    }
+                    
+                    const response = await fetch(url, {
+                        headers: {
+                            'Accept-Language': 'zh-TW',
+                            'User-Agent': 'OurFoodMap/2.5 (simon)'
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error("Nominatim server returned error status");
+                    let data = await response.json();
+                    
+                    // Homophone Auto-Correction Fallback (e.g. "世界" -> "柿界" for "桐遊柿界")
+                    if ((!data || data.length === 0) && query.includes("世界")) {
+                        const correctedQuery = query.replace(/世界/g, "柿界");
+                        console.log(`No results for "${query}". Trying homophone auto-correction fallback: "${correctedQuery}"`);
+                        const correctedUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(correctedQuery)}&format=json&limit=3&accept-language=zh-TW` + (!isForeign ? '&countrycodes=tw' : '');
+                        const correctedRes = await fetch(correctedUrl, {
+                            headers: {
+                                'Accept-Language': 'zh-TW',
+                                'User-Agent': 'OurFoodMap/2.5 (simon)'
+                            }
+                        });
+                        if (correctedRes.ok) {
+                            const correctedData = await correctedRes.json();
+                            if (correctedData && correctedData.length > 0) {
+                                data = correctedData;
+                            }
+                        }
+                    }
+                    
+                    if (data && data.length > 0) {
+                        const firstResult = data[0];
+                        foundCoords = { lat: parseFloat(firstResult.lat), lng: parseFloat(firstResult.lon) };
+                        foundAddress = firstResult.display_name.split(',')[0] || query;
+                    }
+                }
+                
+                // 3. Apply coordinates if found
+                if (foundCoords) {
+                    document.getElementById('form-coords').value = `${foundCoords.lat.toFixed(6)}, ${foundCoords.lng.toFixed(6)}`;
+                    
+                    const displayName = foundAddress.split(',')[0] || query;
+                    alert(`🎉 成功尋找到最佳線上定位！\n\n對應名稱：${displayName}\n座標：${foundCoords.lat.toFixed(6)}, ${foundCoords.lng.toFixed(6)}`);
+                } else {
+                    // Fallback search: search just the location name
+                    console.log(`No results for full query. Trying fallback search for: "${cleanLoc}"`);
+                    const fallbackUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanLoc)}&format=json&limit=1&accept-language=zh-TW`;
+                    const fallbackRes = await fetch(fallbackUrl, {
+                        headers: {
+                            'Accept-Language': 'zh-TW',
+                            'User-Agent': 'OurFoodMap/2.4 (simon)'
+                        }
+                    });
+                    const fallbackData = await fallbackRes.json();
+                    
+                    if (fallbackData && fallbackData.length > 0) {
+                        const firstResult = fallbackData[0];
+                        const lat = parseFloat(firstResult.lat);
+                        const lng = parseFloat(firstResult.lon);
+                        
+                        document.getElementById('form-coords').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                        alert(`⚠️ 無法找到「${query}」的精準定位。\n已自動為您預填「${cleanLoc}」區域中心的座標：\n\n座標：${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+                    } else {
+                        alert(`⚠️ 線上資料庫中未找到與「${query}」相符的座標。\n請確認名稱拼字，或開啟 Google Maps 手動複製經緯度填入。`);
+                    }
+                }
+            } catch (err) {
+                console.error("Online geocoding search failed:", err);
+                alert("⚠️ 線上地標搜尋連線失敗，請檢查網路連線或稍後再試。");
+            } finally {
+                btnSearchOnline.disabled = false;
+                btnSearchOnline.innerHTML = originalHtml;
+                if (typeof lucide !== 'undefined') lucide.createIcons({ node: btnSearchOnline });
+            }
+        });
+    }
 }
 
 /**
