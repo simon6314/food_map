@@ -121,7 +121,9 @@ body {
     grid-template-columns: 42% 58%;
     width: 100vw;
     height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
+    max-height: 100dvh;
     overflow: hidden;
 }
 
@@ -1194,8 +1196,10 @@ body.dark-mode .marker-glow-area.fallback {
 @media (max-width: 1024px) {
     .app-container {
         grid-template-columns: 1fr;
-        grid-template-rows: 40vh 60vh;
+        grid-template-rows: 35vh 65vh;
+        grid-template-rows: 35dvh 65dvh;
         height: 100vh;
+        height: 100dvh;
     }
     
     .map-panel {
@@ -1213,38 +1217,44 @@ body.dark-mode .marker-glow-area.fallback {
     
     .content-panel {
         grid-row: 2;
-        padding: 1.5rem;
+        padding: 1.25rem 1.5rem;
         gap: 1.2rem;
     }
     
     .stats-dashboard {
-        gap: 0.8rem;
-    }
-    
-    .stat-card {
-        padding: 0.8rem;
         gap: 0.6rem;
     }
     
+    .stat-card {
+        padding: 0.75rem 0.6rem;
+        gap: 0.5rem;
+    }
+    
     .stat-icon-wrapper {
-        width: 2.4rem;
-        height: 2.4rem;
-        border-radius: 0.6rem;
+        width: 2.2rem;
+        height: 2.2rem;
+        border-radius: 0.5rem;
     }
     
     .stat-icon-wrapper svg {
-        width: 1.2rem;
-        height: 1.2rem;
+        width: 1.1rem;
+        height: 1.1rem;
     }
     
     .stat-value {
-        font-size: 1.05rem;
+        font-size: 1rem;
+    }
+    
+    /* Touch devices action bar visible by default */
+    .food-card .card-actions {
+        opacity: 1 !important;
     }
 }
 
 @media (max-width: 640px) {
     .app-container {
         grid-template-rows: 35vh 65vh;
+        grid-template-rows: 35dvh 65dvh;
     }
     
     .title-area h1 {
@@ -1255,13 +1265,56 @@ body.dark-mode .marker-glow-area.fallback {
         font-size: 0.85rem;
     }
     
+    /* Elegant iOS/Android style horizontal compact stats bar */
     .stats-dashboard {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.4rem;
     }
     
     .stat-card {
-        padding: 0.75rem 1rem;
+        padding: 0.45rem 0.25rem;
+        gap: 0.35rem;
+        flex-direction: column;
+        text-align: center;
+        justify-content: center;
+        border-radius: 0.6rem;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+    }
+    
+    .stat-icon-wrapper {
+        width: 1.8rem;
+        height: 1.8rem;
+        border-radius: 0.45rem;
+    }
+    
+    .stat-icon-wrapper svg {
+        width: 1rem;
+        height: 1rem;
+    }
+    
+    .stat-label {
+        font-size: 0.68rem;
+        font-weight: 600;
+    }
+    
+    .stat-value {
+        font-size: 0.88rem;
+        font-weight: 700;
+    }
+    
+    .stat-chevron {
+        width: 0.65rem;
+        height: 0.65rem;
+        margin-left: 0.1rem;
+    }
+    
+    /* Wrapping legend to avoid clipping on extra narrow mobile screens */
+    .map-footer {
+        gap: 0.6rem;
+        font-size: 0.72rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding-top: 0.1rem;
     }
     
     .filter-controls {
