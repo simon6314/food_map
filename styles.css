@@ -812,6 +812,8 @@ body.dark-mode .btn-card-action:hover {
     max-height: 85dvh;
     max-height: 85vh;
     overflow-y: auto;
+    box-sizing: border-box;
+    min-width: 0;
 }
 
 .modal-card-container.width-wide {
@@ -867,6 +869,7 @@ form {
     display: flex;
     flex-direction: column;
     gap: 1.2rem;
+    width: 100%;
 }
 
 .form-group {
@@ -895,6 +898,9 @@ form {
     font-size: 0.9rem;
     outline: none;
     transition: border-color 0.2s ease;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .form-group input:focus, .form-group textarea:focus {
