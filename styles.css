@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Our Food Map & Journey Stylesheet
    Designed with Rich Aesthetics, Glassmorphism, and Light/Dark Modes.
    ========================================================================== */
@@ -1344,12 +1344,14 @@ body.dark-mode .marker-glow-area.fallback {
     }
     
     .modal-overlay {
-        padding: 0.75rem;
+        padding: 0.5rem;
     }
     .modal-card-container {
-        padding: 1.25rem;
-        max-height: 85dvh;
-        max-height: 85vh;
+        padding: 1rem;
+        gap: 1rem;
+        max-height: 90dvh;
+        max-height: 90vh;
+        width: 100%;
         overflow-y: auto;
     }
     .sync-tabs button {
@@ -1681,5 +1683,16 @@ body.dark-mode .progress-track {
     .btn-back-to-top svg {
         width: 1.2rem;
         height: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-coords-label {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+    }
+    .btn-search-online-coords {
+        align-self: flex-start;
     }
 }

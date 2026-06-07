@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Our Food Map - Core Application Controller (app.js)
    Manages CSV data parsing, state overrides, search, UI rendering, and CRUD operations.
    ========================================================================== */
@@ -1308,7 +1308,7 @@ function setupEventListeners() {
             const windowScrollTop = window.pageYOffset || document.documentElement.scrollTop;
             const currentScroll = Math.max(scrollTop, windowScrollTop);
             
-            if (currentScroll > 300) {
+            if (currentScroll > 150) {
                 btnBackToTop.classList.remove('hidden');
             } else {
                 btnBackToTop.classList.add('hidden');
