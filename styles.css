@@ -66,12 +66,16 @@ body.dark-mode {
     box-sizing: border-box;
 }
 
+html, body {
+    overflow-x: hidden;
+    max-width: 100%;
+}
+
 body {
     font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background-color: var(--bg-app);
     color: var(--text-primary);
     min-height: 100vh;
-    overflow-x: hidden;
     transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
     position: relative;
 }
@@ -82,12 +86,23 @@ body {
     font-style: italic;
 }
 
+/* Background Ambient Blur Glow Container */
+.bg-glow-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+}
+
 /* Background Ambient Blur Glows */
 .bg-glow {
     position: absolute;
     border-radius: 50%;
     filter: blur(150px);
-    z-index: -1;
     opacity: 0.45;
     animation: drift 20s infinite alternate ease-in-out;
     pointer-events: none;
@@ -119,7 +134,7 @@ body {
 .app-container {
     display: grid;
     grid-template-columns: 42% 58%;
-    width: 100vw;
+    width: 100%;
     height: 100vh;
     height: 100dvh;
     max-height: 100vh;
