@@ -1334,11 +1334,11 @@ body.dark-mode .marker-glow-area.fallback {
         justify-content: flex-end;
     }
     
-    .btn span {
+    .action-buttons-group .btn span {
         display: none; /* Hide button text on extra small screens to save space */
     }
     
-    .btn {
+    .action-buttons-group .btn {
         padding: 0.6rem;
         width: 2.8rem;
     }
