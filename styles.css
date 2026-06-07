@@ -1596,6 +1596,13 @@ body.dark-mode .progress-track {
     flex-wrap: wrap;
     gap: 0.4rem;
 }
+.form-coords-label span {
+    flex-shrink: 0;
+}
+.btn-search-online-coords {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
 
 .btn-search-online-coords {
     background: none;

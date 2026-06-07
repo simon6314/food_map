@@ -1315,6 +1315,9 @@ function setupEventListeners() {
             }
         };
         
+        // Initialize visibility on page load
+        handleScroll();
+        
         if (contentPanel) {
             contentPanel.addEventListener('scroll', handleScroll);
         }
