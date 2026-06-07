@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Our Food Map - Leaflet Map Controller (map.js)
    Controls map initialization, tile themes, marker rendering, and polyline animations.
    ========================================================================== */
@@ -812,7 +812,8 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
         
         marker.bindPopup(popupContent, {
             maxWidth: 240,
-            closeButton: false
+            closeButton: false,
+            autoPan: false
         });
         
         // Trigger popup Lucide icons refresh after opening
@@ -824,6 +825,8 @@ function updateMapTrail(records, coordsDb, animatePath = true) {
         
         // Map bidirection interaction (marker click highlights timeline card of the latest visit)
         marker.on('click', () => {
+            panToMarkerWithOffset(marker, group.lat, group.lng);
+            
             const sortedGroupRecords = [...group.records].sort((a, b) => parseDateString(b.date) - parseDateString(a.date));
             if (sortedGroupRecords.length > 0) {
                 highlightTimelineCard(sortedGroupRecords[0].index);
@@ -872,13 +875,38 @@ function highlightMapMarker(recordIndex, isHighlighted = true) {
 /**
  * Focus and zoom in on a specific marker
  */
+/**
+ * Fly to marker and pan with vertical offset to center marker in lower half,
+ * preventing popups from being cut off or pushing the marker out of view.
+ */
+function panToMarkerWithOffset(marker, lat, lng) {
+    if (!map) return;
+    
+    const mapZoom = map.getZoom() < 14 ? 14 : map.getZoom();
+    const targetLatLng = L.latLng(lat, lng);
+    
+    // Project latlng to container point at target zoom
+    const targetPoint = map.project(targetLatLng, mapZoom);
+    
+    // Calculate offset (20% of map height) to shift center upwards
+    // which positions the marker lower in the viewport
+    const mapHeight = map.getSize().y;
+    const verticalOffset = mapHeight * 0.20;
+    
+    targetPoint.y -= verticalOffset;
+    
+    const offsetLatLng = map.unproject(targetPoint, mapZoom);
+    
+    map.flyTo(offsetLatLng, mapZoom, {
+        duration: 1.2
+    });
+}
+
 function focusMarker(recordIndex, lat, lng) {
     const marker = mapMarkers[recordIndex];
     
     if (lat && lng) {
-        map.flyTo([lat, lng], 16, {
-            duration: 1.2
-        });
+        panToMarkerWithOffset(marker, lat, lng);
         
         if (marker) {
             setTimeout(() => {

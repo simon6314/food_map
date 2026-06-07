@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Our Food Map - Core Application Controller (app.js)
    Manages CSV data parsing, state overrides, search, UI rendering, and CRUD operations.
    ========================================================================== */
@@ -1296,6 +1296,41 @@ function setupEventListeners() {
                 btnSearchOnline.innerHTML = originalHtml;
                 if (typeof lucide !== 'undefined') lucide.createIcons({ node: btnSearchOnline });
             }
+        });
+    }
+    
+    // 16. Back to Top Button Scroll and Click Events
+    const contentPanel = document.querySelector('.content-panel');
+    const btnBackToTop = document.getElementById('btn-back-to-top');
+    if (btnBackToTop) {
+        const handleScroll = () => {
+            const scrollTop = contentPanel ? contentPanel.scrollTop : 0;
+            const windowScrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const currentScroll = Math.max(scrollTop, windowScrollTop);
+            
+            if (currentScroll > 300) {
+                btnBackToTop.classList.remove('hidden');
+            } else {
+                btnBackToTop.classList.add('hidden');
+            }
+        };
+        
+        if (contentPanel) {
+            contentPanel.addEventListener('scroll', handleScroll);
+        }
+        window.addEventListener('scroll', handleScroll);
+        
+        btnBackToTop.addEventListener('click', () => {
+            if (contentPanel) {
+                contentPanel.scrollTo({
+                    top: 0,
+                    behavior: 'smooth'
+                });
+            }
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
         });
     }
 }

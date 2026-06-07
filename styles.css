@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Our Food Map & Journey Stylesheet
    Designed with Rich Aesthetics, Glassmorphism, and Light/Dark Modes.
    ========================================================================== */
@@ -809,6 +809,9 @@ body.dark-mode .btn-card-action:hover {
     gap: 1.5rem;
     transform: translateY(20px) scale(0.95);
     transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 85dvh;
+    max-height: 85vh;
+    overflow-y: auto;
 }
 
 .modal-card-container.width-wide {
@@ -1334,10 +1337,18 @@ body.dark-mode .marker-glow-area.fallback {
         width: 2.8rem;
     }
     
+    .modal-overlay {
+        padding: 0.75rem;
+    }
     .modal-card-container {
-        padding: 1.5rem;
-        max-height: 90vh;
+        padding: 1.25rem;
+        max-height: 85dvh;
+        max-height: 85vh;
         overflow-y: auto;
+    }
+    .sync-tabs button {
+        font-size: 0.76rem;
+        padding: 0.5rem 0.25rem;
     }
 }
 
@@ -1573,4 +1584,89 @@ body.dark-mode .progress-track {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   11. COORDINATES & MOBILE LAYOUT IMPROVEMENTS
+   ========================================================================== */
+.form-coords-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.btn-search-online-coords {
+    background: none;
+    border: none;
+    padding: 0;
+    color: var(--primary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    transition: color 0.2s;
+}
+
+.btn-search-online-coords:hover {
+    color: var(--primary-hover);
+}
+
+/* Floating Back to Top Button */
+.btn-back-to-top {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 3.2rem;
+    height: 3.2rem;
+    border-radius: 50%;
+    background-color: var(--primary);
+    color: #ffffff !important;
+    border: 1px solid var(--border-glass);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 10px 25px -5px rgba(220, 38, 127, 0.4), var(--shadow-premium);
+    z-index: 9999;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.btn-back-to-top:hover {
+    transform: translateY(-5px) scale(1.05);
+    background-color: var(--primary-hover);
+    box-shadow: 0 15px 30px -5px rgba(220, 38, 127, 0.6), var(--shadow-premium);
+}
+
+.btn-back-to-top svg {
+    width: 1.4rem;
+    height: 1.4rem;
+    stroke: #ffffff !important;
+    stroke-width: 2.5px;
+}
+
+.btn-back-to-top.hidden {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+    pointer-events: none;
+}
+
+@media (max-width: 640px) {
+    .btn-back-to-top {
+        bottom: 1.5rem;
+        right: 1.5rem;
+        width: 2.8rem;
+        height: 2.8rem;
+    }
+    .btn-back-to-top svg {
+        width: 1.2rem;
+        height: 1.2rem;
+    }
 }

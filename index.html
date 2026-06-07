@@ -145,7 +145,7 @@
                 </div>
             </section>
 
-            <!-- Timeline Timeline Timeline -->
+            <!-- Timeline Section -->
             <section class="timeline-section">
                 <div id="no-results" class="no-results-state hidden">
                     <i data-lucide="frown" class="no-results-icon"></i>
@@ -192,14 +192,14 @@
                 </div>
                 
                 <div class="form-group">
-                    <label for="form-coords" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>地圖定位座標 (選填，格式為：緯度, 經度)</span>
-                        <button type="button" id="btn-search-online-coords" style="background: none; border: none; padding: 0; color: var(--primary); font-size: 0.76rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 0.2rem; transition: color 0.2s;" title="以店家名稱線上搜尋最精準經緯度">
+                    <label for="form-coords" class="form-coords-label">
+                        <span>地圖定位座標 (選填)</span>
+                        <button type="button" id="btn-search-online-coords" class="btn-search-online-coords" title="以店家名稱線上搜尋最精準經緯度">
                             <i data-lucide="search" style="width: 0.85rem; height: 0.85rem;"></i><span>🔍 搜尋線上定位</span>
                         </button>
                     </label>
                     <input type="text" id="form-coords" placeholder="例如：24.6853, 120.8753">
-                    <span class="form-help">點擊右上角「🔍 搜尋線上定位」，能根據您輸入的地區和餐廳名稱，線上自動尋找最精準的經緯度座標！</span>
+                    <span class="form-help">格式為：緯度, 經度 (例如：24.6853, 120.8753)。點擊右上角「🔍 搜尋線上定位」，能根據您輸入的地區和餐廳名稱，線上自動尋找最精準的經緯度座標！</span>
                 </div>
                 
                 <div class="form-actions">
@@ -272,6 +272,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Floating Back to Top Button -->
+    <button id="btn-back-to-top" class="btn-back-to-top hidden" title="回到最上方">
+        <i data-lucide="arrow-up"></i>
+    </button>
 
     <!-- Leaflet JS Map Library -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
