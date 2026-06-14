@@ -5,6 +5,7 @@
 
 /* 1. CSS Custom Properties for Theming */
 :root {
+    --sheet-peek-height: 340px;
     /* Color Palette - Elegant Rose & Soft Teal */
     --primary: hsl(336, 80%, 58%);       /* Warm Rose Pink */
     --primary-hover: hsl(336, 85%, 48%);
@@ -64,6 +65,10 @@ body.dark-mode {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+.bottom-sheet-handle-wrapper {
+    display: none; /* Hidden on desktop by default */
 }
 
 html, body {
@@ -1219,30 +1224,150 @@ body.dark-mode .marker-glow-area.fallback {
    ========================================================================== */
 @media (max-width: 1024px) {
     .app-container {
-        grid-template-columns: 1fr;
-        grid-template-rows: 35vh 65vh;
-        grid-template-rows: 35dvh 65dvh;
+        display: block;
+        position: relative;
+        width: 100vw;
         height: 100vh;
         height: 100dvh;
+        overflow: hidden;
     }
     
     .map-panel {
-        grid-row: 1;
-        border-right: none;
-        border-bottom: 1px solid var(--border-glass);
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
         height: 100%;
-        padding: 1rem;
-        gap: 0.5rem;
+        padding: 0;
+        border-right: none;
+        border-bottom: none;
+        box-shadow: none;
+        z-index: 1;
     }
     
     #map {
-        border-radius: 0.8rem;
+        border-radius: 0;
+        border: none;
+        height: 100%;
+        width: 100%;
     }
     
+    /* Absolute overlay map elements on mobile */
+    .map-panel .map-header {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 100;
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-glass);
+        padding: 0.4rem 0.8rem;
+        border-radius: 2rem;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: var(--shadow-premium);
+        pointer-events: none;
+    }
+    
+    .map-panel .map-header h2 {
+        font-size: 0.9rem;
+    }
+    
+    .map-panel .map-footer {
+        position: absolute;
+        top: 3.25rem;
+        left: 0.75rem;
+        z-index: 100;
+        background-color: var(--bg-panel);
+        border: 1px solid var(--border-glass);
+        padding: 0.4rem 0.8rem;
+        border-radius: 2rem;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: var(--shadow-premium);
+        flex-direction: column;
+        gap: 0.25rem;
+        align-items: flex-start;
+        pointer-events: none;
+    }
+    
+    .map-panel .map-footer .map-legend-item {
+        font-size: 0.7rem;
+    }
+
+    /* Bottom Sheet Layout for Right Column Panel */
     .content-panel {
-        grid-row: 2;
-        padding: 1.25rem 1.5rem;
-        gap: 1.2rem;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 75dvh;
+        z-index: 1000;
+        background-color: rgba(13, 20, 35, 0.92);
+        border-top: 1px solid var(--border-glass);
+        border-top-left-radius: 1.5rem;
+        border-top-right-radius: 1.5rem;
+        padding: 0 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 0px)) 1.25rem;
+        gap: 0.8rem;
+        box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.35);
+        transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+        will-change: transform;
+        overflow-y: hidden;
+    }
+    
+    body.light-mode .content-panel {
+        background-color: rgba(253, 250, 253, 0.94);
+    }
+    
+    @supports (backdrop-filter: blur(5px)) {
+        .content-panel {
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            background-color: rgba(13, 20, 35, 0.82);
+        }
+        body.light-mode .content-panel {
+            background-color: rgba(253, 250, 253, 0.88);
+        }
+    }
+    
+    /* 3 States of Bottom Sheet */
+    .content-panel.sheet-collapsed {
+        transform: translateY(calc(100% - 60px));
+        overflow-y: hidden;
+    }
+    
+    .content-panel.sheet-half {
+        transform: translateY(calc(100% - var(--sheet-peek-height)));
+        overflow-y: hidden;
+    }
+    
+    .content-panel.sheet-expanded {
+        transform: translateY(0);
+        overflow-y: auto;
+    }
+    
+    .bottom-sheet-handle-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 0.6rem 0 0.4rem 0;
+        cursor: pointer;
+        width: 100%;
+        user-select: none;
+        touch-action: manipulation;
+    }
+    
+    .bottom-sheet-handle {
+        width: 42px;
+        height: 5px;
+        background-color: var(--text-light);
+        border-radius: 3px;
+        opacity: 0.5;
+        transition: background-color 0.2s, transform 0.2s;
+    }
+    
+    .bottom-sheet-handle-wrapper:hover .bottom-sheet-handle {
+        background-color: var(--primary);
+        opacity: 0.8;
     }
     
     .stats-dashboard {
@@ -1276,9 +1401,8 @@ body.dark-mode .marker-glow-area.fallback {
 }
 
 @media (max-width: 640px) {
-    .app-container {
-        grid-template-rows: 35vh 65vh;
-        grid-template-rows: 35dvh 65dvh;
+    :root {
+        --sheet-peek-height: 290px;
     }
     
     .title-area h1 {

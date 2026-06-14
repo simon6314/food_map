@@ -556,6 +556,13 @@ window.highlightTimelineCard = function(recordIndex) {
     // 1. Remove highlight classes from all cards
     document.querySelectorAll('.food-card').forEach(c => c.classList.remove('active-highlight'));
     
+    // Auto-expand mobile bottom sheet if it is collapsed
+    const contentPanelElement = document.querySelector('.content-panel');
+    if (contentPanelElement && contentPanelElement.classList.contains('sheet-collapsed')) {
+        contentPanelElement.classList.remove('sheet-collapsed');
+        contentPanelElement.classList.add('sheet-half');
+    }
+    
     // 2. Select card and scroll to it smoothly
     const card = document.getElementById(`card-rec-${recordIndex}`);
     if (card) {
@@ -1335,6 +1342,27 @@ function setupEventListeners() {
                 behavior: 'smooth'
             });
         });
+        
+        // Mobile Bottom Sheet toggle functionality
+        const contentPanelElement = document.querySelector('.content-panel');
+        const sheetHandle = document.getElementById('bottomSheetHandle');
+        if (sheetHandle && contentPanelElement) {
+            // Set initial state class on load for mobile
+            contentPanelElement.classList.add('sheet-half');
+            
+            sheetHandle.addEventListener('click', () => {
+                if (contentPanelElement.classList.contains('sheet-half')) {
+                    contentPanelElement.classList.remove('sheet-half');
+                    contentPanelElement.classList.add('sheet-expanded');
+                } else if (contentPanelElement.classList.contains('sheet-expanded')) {
+                    contentPanelElement.classList.remove('sheet-expanded');
+                    contentPanelElement.classList.add('sheet-collapsed');
+                } else {
+                    contentPanelElement.classList.remove('sheet-collapsed');
+                    contentPanelElement.classList.add('sheet-half');
+                }
+            });
+        }
     }
 }
 
