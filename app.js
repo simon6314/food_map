@@ -556,12 +556,7 @@ window.highlightTimelineCard = function(recordIndex) {
     // 1. Remove highlight classes from all cards
     document.querySelectorAll('.food-card').forEach(c => c.classList.remove('active-highlight'));
     
-    // Auto-expand mobile bottom sheet if it is collapsed
-    const contentPanelElement = document.querySelector('.content-panel');
-    if (contentPanelElement && contentPanelElement.classList.contains('sheet-collapsed')) {
-        contentPanelElement.classList.remove('sheet-collapsed');
-        contentPanelElement.classList.add('sheet-expanded');
-    }
+    
     
     // 2. Select card and scroll to it smoothly
     const card = document.getElementById(`card-rec-${recordIndex}`);
