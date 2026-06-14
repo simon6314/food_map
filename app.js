@@ -560,7 +560,7 @@ window.highlightTimelineCard = function(recordIndex) {
     const contentPanelElement = document.querySelector('.content-panel');
     if (contentPanelElement && contentPanelElement.classList.contains('sheet-collapsed')) {
         contentPanelElement.classList.remove('sheet-collapsed');
-        contentPanelElement.classList.add('sheet-half');
+        contentPanelElement.classList.add('sheet-expanded');
     }
     
     // 2. Select card and scroll to it smoothly
@@ -1343,25 +1343,47 @@ function setupEventListeners() {
             });
         });
         
-        // Mobile Bottom Sheet toggle functionality
+        // Mobile Bottom Sheet toggle and swipe functionality
         const contentPanelElement = document.querySelector('.content-panel');
         const sheetHandle = document.getElementById('bottomSheetHandle');
         if (sheetHandle && contentPanelElement) {
-            // Set initial state class on load for mobile
-            contentPanelElement.classList.add('sheet-half');
+            // Set initial state to collapsed on load for mobile
+            contentPanelElement.classList.add('sheet-collapsed');
             
+            // 1. Toggle on click
             sheetHandle.addEventListener('click', () => {
-                if (contentPanelElement.classList.contains('sheet-half')) {
-                    contentPanelElement.classList.remove('sheet-half');
-                    contentPanelElement.classList.add('sheet-expanded');
-                } else if (contentPanelElement.classList.contains('sheet-expanded')) {
+                if (contentPanelElement.classList.contains('sheet-expanded')) {
                     contentPanelElement.classList.remove('sheet-expanded');
                     contentPanelElement.classList.add('sheet-collapsed');
                 } else {
                     contentPanelElement.classList.remove('sheet-collapsed');
-                    contentPanelElement.classList.add('sheet-half');
+                    contentPanelElement.classList.add('sheet-expanded');
                 }
             });
+            
+            // 2. Swipe detection (up/down) on drag handle
+            let touchStartY = 0;
+            let touchEndY = 0;
+            
+            sheetHandle.addEventListener('touchstart', (e) => {
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            
+            sheetHandle.addEventListener('touchend', (e) => {
+                touchEndY = e.changedTouches[0].clientY;
+                const diffY = touchEndY - touchStartY;
+                if (Math.abs(diffY) > 30) { // Threshold for swipe gesture
+                    if (diffY > 0) {
+                        // Swipe down -> Collapse
+                        contentPanelElement.classList.remove('sheet-expanded');
+                        contentPanelElement.classList.add('sheet-collapsed');
+                    } else {
+                        // Swipe up -> Expand
+                        contentPanelElement.classList.remove('sheet-collapsed');
+                        contentPanelElement.classList.add('sheet-expanded');
+                    }
+                }
+            }, { passive: true });
         }
     }
 }

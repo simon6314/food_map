@@ -5,7 +5,6 @@
 
 /* 1. CSS Custom Properties for Theming */
 :root {
-    --sheet-peek-height: 340px;
     /* Color Palette - Elegant Rose & Soft Teal */
     --primary: hsl(336, 80%, 58%);       /* Warm Rose Pink */
     --primary-hover: hsl(336, 85%, 48%);
@@ -1329,14 +1328,9 @@ body.dark-mode .marker-glow-area.fallback {
         }
     }
     
-    /* 3 States of Bottom Sheet */
+    /* 2 States of Bottom Sheet (Collapsed or Expanded) */
     .content-panel.sheet-collapsed {
-        transform: translateY(calc(100% - 60px));
-        overflow-y: hidden;
-    }
-    
-    .content-panel.sheet-half {
-        transform: translateY(calc(100% - var(--sheet-peek-height)));
+        transform: translateY(calc(100% - 50px));
         overflow-y: hidden;
     }
     
@@ -1401,10 +1395,6 @@ body.dark-mode .marker-glow-area.fallback {
 }
 
 @media (max-width: 640px) {
-    :root {
-        --sheet-peek-height: 290px;
-    }
-    
     .title-area h1 {
         font-size: 1.6rem;
     }
