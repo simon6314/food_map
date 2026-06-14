@@ -558,14 +558,19 @@ window.highlightTimelineCard = function(recordIndex) {
     
     
     
-    // 2. Select card and scroll to it smoothly
+    // 2. Select card and scroll to it smoothly (only if bottom sheet is expanded)
     const card = document.getElementById(`card-rec-${recordIndex}`);
     if (card) {
         card.classList.add('active-highlight');
-        card.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-        });
+        
+        const contentPanelElement = document.querySelector('.content-panel');
+        const isExpanded = contentPanelElement && contentPanelElement.classList.contains('sheet-expanded');
+        if (isExpanded) {
+            card.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+        }
     }
 };
 
@@ -1345,14 +1350,27 @@ function setupEventListeners() {
             // Set initial state to collapsed on load for mobile
             contentPanelElement.classList.add('sheet-collapsed');
             
+            const scrollToActiveCard = () => {
+                const activeCard = document.querySelector('.food-card.active-highlight');
+                if (activeCard) {
+                    activeCard.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }
+            };
+            
             // 1. Toggle on click
             sheetHandle.addEventListener('click', () => {
                 if (contentPanelElement.classList.contains('sheet-expanded')) {
                     contentPanelElement.classList.remove('sheet-expanded');
                     contentPanelElement.classList.add('sheet-collapsed');
+                    contentPanelElement.scrollTop = 0; // Reset scroll when collapsed to keep handle visible
                 } else {
                     contentPanelElement.classList.remove('sheet-collapsed');
                     contentPanelElement.classList.add('sheet-expanded');
+                    // Scroll to active card after transition opens
+                    setTimeout(scrollToActiveCard, 150);
                 }
             });
             
@@ -1372,10 +1390,13 @@ function setupEventListeners() {
                         // Swipe down -> Collapse
                         contentPanelElement.classList.remove('sheet-expanded');
                         contentPanelElement.classList.add('sheet-collapsed');
+                        contentPanelElement.scrollTop = 0; // Reset scroll when collapsed to keep handle visible
                     } else {
                         // Swipe up -> Expand
                         contentPanelElement.classList.remove('sheet-collapsed');
                         contentPanelElement.classList.add('sheet-expanded');
+                        // Scroll to active card after transition opens
+                        setTimeout(scrollToActiveCard, 150);
                     }
                 }
             }, { passive: true });

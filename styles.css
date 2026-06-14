@@ -1340,14 +1340,36 @@ body.dark-mode .marker-glow-area.fallback {
     }
     
     .bottom-sheet-handle-wrapper {
+        position: sticky;
+        top: 0;
+        z-index: 1100;
+        background-color: rgba(13, 20, 35, 0.95);
+        border-bottom: 1px solid var(--border-glass);
+        margin-left: -1.25rem;
+        margin-right: -1.25rem;
+        padding: 0.6rem 1.25rem 0.4rem 1.25rem;
+        width: calc(100% + 2.5rem);
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 0.6rem 0 0.4rem 0;
         cursor: pointer;
-        width: 100%;
         user-select: none;
         touch-action: manipulation;
+    }
+    
+    body.light-mode .bottom-sheet-handle-wrapper {
+        background-color: rgba(253, 250, 253, 0.96);
+    }
+    
+    @supports (backdrop-filter: blur(5px)) {
+        .bottom-sheet-handle-wrapper {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            background-color: rgba(13, 20, 35, 0.85);
+        }
+        body.light-mode .bottom-sheet-handle-wrapper {
+            background-color: rgba(253, 250, 253, 0.9);
+        }
     }
     
     .bottom-sheet-handle {
