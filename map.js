@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Our Food Map - Leaflet Map Controller (map.js)
    Controls map initialization, tile themes, marker rendering, and polyline animations.
    ========================================================================== */
@@ -11,8 +11,8 @@ let mapMarkers = {}; // Keep track of marker objects mapped by record ID / index
 
 // Tile layer URLs
 const MAP_TILES = {
-    light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=cb1_34ef_1_fa5141bab78ce3c4610048b1',
+    dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=cb1_34ef_1_fa5141bab78ce3c4610048b1'
 };
 
 const MAP_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
