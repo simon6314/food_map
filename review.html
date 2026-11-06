@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>美食足跡・年度回顧</title>
+<style>
+  :root {
+    --bg: #fdfafd;
+    --card: #ffffff;
+    --text: #1e293b;
+    --sub: #64748b;
+    --line: rgba(15, 23, 42, 0.08);
+    --track: rgba(15, 23, 42, 0.07);
+    --primary: hsl(336, 80%, 58%);
+    --home: hsl(336, 80%, 58%);
+    --out: hsl(200, 70%, 50%);
+    --gold: hsl(28, 90%, 55%);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #080c14;
+      --card: #111c30;
+      --text: #f8fafc;
+      --sub: #cbd5e1;
+      --line: rgba(255, 255, 255, 0.1);
+      --track: rgba(255, 255, 255, 0.08);
+      --primary: hsl(336, 90%, 65%);
+      --home: hsl(336, 90%, 65%);
+      --out: hsl(200, 80%, 62%);
+      --gold: hsl(28, 95%, 62%);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #080c14;
+    --card: #111c30;
+    --text: #f8fafc;
+    --sub: #cbd5e1;
+    --line: rgba(255, 255, 255, 0.1);
+    --track: rgba(255, 255, 255, 0.08);
+    --primary: hsl(336, 90%, 65%);
+    --home: hsl(336, 90%, 65%);
+    --out: hsl(200, 80%, 62%);
+    --gold: hsl(28, 95%, 62%);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, "Noto Sans TC", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 16px 16px 48px; }
+
+  .top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 16px;
+  }
+  .back {
+    color: var(--sub); text-decoration: none; font-size: 0.9rem; white-space: nowrap;
+  }
+  .title { margin: 0; font-size: 1.35rem; font-weight: 700; }
+  .title small { display: block; font-size: 0.8rem; font-weight: 400; color: var(--sub); margin-top: 2px; }
+
+  .year-nav {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+  }
+  .year-nav button {
+    background: var(--card); color: var(--text); border: 1px solid var(--line);
+    border-radius: 999px; width: 38px; height: 38px; font-size: 1.1rem; cursor: pointer;
+  }
+  .year-nav button:disabled { opacity: 0.35; cursor: default; }
+  .year-label { flex: 1; text-align: center; font-size: 1.25rem; font-weight: 700; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  }
+  .card h2 { margin: 0 0 4px; font-size: 1rem; font-weight: 700; }
+  .card .hint { margin: 0 0 14px; font-size: 0.78rem; color: var(--sub); }
+
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .hero .card { margin: 0; text-align: center; padding: 16px 10px; }
+  .hero .num { font-size: 1.6rem; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+  .hero .lbl { font-size: 0.8rem; color: var(--sub); margin-top: 4px; }
+
+  .split-bar {
+    display: flex; height: 14px; border-radius: 999px; overflow: hidden; background: var(--track);
+    margin: 4px 0 10px;
+  }
+  .split-bar span { display: block; height: 100%; }
+  .split-legend { display: flex; justify-content: space-between; gap: 10px; font-size: 0.9rem; }
+  .split-legend b { font-variant-numeric: tabular-nums; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+  .rank-row { margin-bottom: 12px; }
+  .rank-row:last-child { margin-bottom: 0; }
+  .rank-head { display: flex; justify-content: space-between; gap: 10px; font-size: 0.92rem; margin-bottom: 5px; }
+  .rank-head span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .rank-head b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rank-bar { height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+  .rank-bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--primary), var(--gold)); }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .compare .box { border-radius: 12px; padding: 12px; background: var(--track); text-align: center; }
+  .compare .big { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .compare .small { font-size: 0.8rem; color: var(--sub); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 0.82rem; padding: 4px 10px; border-radius: 999px;
+    background: var(--track); max-width: 100%; overflow-wrap: anywhere;
+  }
+  .empty { text-align: center; color: var(--sub); padding: 40px 12px; font-size: 0.95rem; }
+  .status { text-align: center; color: var(--sub); padding: 40px 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1 class="title">年度回顧<small>我們一起吃過的日子</small></h1>
+    <a class="back" href="index.html">← 回美食足跡</a>
+  </div>
+
+  <div class="year-nav">
+    <button id="prevYear" aria-label="上一年">‹</button>
+    <div class="year-label" id="yearLabel">載入中…</div>
+    <button id="nextYear" aria-label="下一年">›</button>
+  </div>
+
+  <div id="content"><div class="status">載入中…</div></div>
+</div>
+
+<script>
+(function () {
+  // Same data sources as the main page (Apps Script first, then the published CSV)
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbxzj9GLRhG0nfx5c_Smewdz4FiOpfdzyQE6GOi5Yh5y1-uE0JCIUh4PLceAeliygiQO/exec';
+  const CSV_URL = 'https://docs.google.com/spreadsheets/d/1Kxl_tLb3vDVVk4AAAW4n7qm_OWE5d9YCU6AMttpnAvQ/export?format=csv';
+  const OVERRIDES_KEY = 'food_map_overrides';
+
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  let allRecords = [];
+  let years = [];
+  let currentYear = null;
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [], cell = '', q = false;
+    text = String(text).replace(/^﻿/, '');
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') {
+          if (text[i + 1] === '"') { cell += '"'; i++; } else { q = false; }
+        } else { cell += c; }
+      } else if (c === '"') {
+        q = true;
+      } else if (c === ',') {
+        row.push(cell); cell = '';
+      } else if (c === '\n' || c === '\r') {
+        if (c === '\r' && text[i + 1] === '\n') i++;
+        row.push(cell); rows.push(row); row = []; cell = '';
+      } else {
+        cell += c;
+      }
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    if (rows.length < 2) return [];
+    const headers = rows[0].map(h => h.trim());
+    return rows.slice(1)
+      .filter(r => r[0] && r[0].trim())
+      .map(r => {
+        const o = {};
+        headers.forEach((h, i) => { o[h] = (r[i] || '').trim(); });
+        return o;
+      });
+  }
+
+  // Normalize both GAS JSON and CSV rows to { date, location, food }
+  function norm(r) {
+    return {
+      date: String(r.date ?? r['時間'] ?? '').trim(),
+      location: String(r.location ?? r['地點'] ?? '').trim(),
+      food: String(r.food ?? r['餐廳/美食'] ?? '').trim()
+    };
+  }
+
+  // Apply this device's edits / deletions / additions, same rules as the main page
+  function mergeOverrides(base, ov) {
+    const out = [];
+    base.forEach((rec, idx) => {
+      if ((ov.deleted || []).includes(idx)) return;
+      out.push(ov.edited && ov.edited[idx] ? { ...rec, ...ov.edited[idx] } : rec);
+    });
+    (ov.added || []).forEach(r => out.push(r));
+    return out.map(norm).filter(r => r.date);
+  }
+
+  function yearOf(d) {
+    const p = String(d).split(/[\/-]/);
+    if (!p[0]) return null;
+    const y = parseInt(p[0], 10);
+    if (isNaN(y)) return null;
+    return p[0].length === 4 ? y : 2000 + y;
+  }
+
+  function dayKey(d) {
+    const p = String(d).split(/[\/-]/).map(s => s.trim());
+    if (p.length < 3) return String(d);
+    const y = p[0].length === 4 ? p[0] : '20' + p[0];
+    return y + '-' + p[1].padStart(2, '0') + '-' + p[2].padStart(2, '0');
+  }
+
+  // A meal can list several items, e.g. "綠豆沙，豬腳調理包"
+  function itemsOf(food) {
+    return String(food).split(/[，,、]/).map(s => s.trim()).filter(Boolean);
+  }
+
+  function computeYear(year) {
+    const recs = allRecords.filter(r => yearOf(r.date) === year);
+
+    // 在家 vs 外食 (same rule as the main page: location containing 家 = home)
+    const home = recs.filter(r => r.location.includes('家')).length;
+    const out = recs.length - home;
+
+    // 地區統計
+    const locCount = {};
+    recs.forEach(r => { const k = r.location || '（未填）'; locCount[k] = (locCount[k] || 0) + 1; });
+    const locations = Object.entries(locCount).sort((a, b) => b[1] - a[1]);
+
+    // 最常吃 TOP 5
+    const foodCount = {};
+    recs.forEach(r => itemsOf(r.food).forEach(f => { foodCount[f] = (foodCount[f] || 0) + 1; }));
+    const top5 = Object.entries(foodCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+    // 新店 vs 回訪店: first-ever year of each item across all records
+    const firstYear = {};
+    allRecords.forEach(r => {
+      const y = yearOf(r.date);
+      itemsOf(r.food).forEach(f => {
+        if (firstYear[f] === undefined || y < firstYear[f]) firstYear[f] = y;
+      });
+    });
+    const thisYearItems = Object.keys(foodCount);
+    const newItems = thisYearItems.filter(f => firstYear[f] === year);
+    const returnedItems = thisYearItems.filter(f => firstYear[f] < year);
+
+    return {
+      total: recs.length,
+      days: new Set(recs.map(r => dayKey(r.date))).size,
+      locationCount: locations.length,
+      itemCount: thisYearItems.length,
+      home, out, locations, top5,
+      newItems: newItems.sort((a, b) => foodCount[b] - foodCount[a]),
+      returnedCount: returnedItems.length
+    };
+  }
+
+  function render() {
+    const label = $('yearLabel');
+    const content = $('content');
+    label.textContent = currentYear + ' 年';
+    $('prevYear').disabled = years.indexOf(currentYear) <= 0;
+    $('nextYear').disabled = years.indexOf(currentYear) >= years.length - 1;
+
+    const s = computeYear(currentYear);
+    if (s.total === 0) {
+      content.innerHTML = '<div class="empty">這一年還沒有紀錄</div>';
+      return;
+    }
+
+    const homePct = Math.round((s.home / s.total) * 100);
+    const outPct = 100 - homePct;
+    const maxLoc = s.locations.length ? s.locations[0][1] : 1;
+    const maxFood = s.top5.length ? s.top5[0][1] : 1;
+
+    content.innerHTML = `
+      <div class="hero">
+        <div class="card"><div class="num">${s.total}</div><div class="lbl">總共吃了幾次</div></div>
+        <div class="card"><div class="num">${s.days}</div><div class="lbl">有出去吃的天數</div></div>
+        <div class="card"><div class="num">${s.locationCount}</div><div class="lbl">去過的地區</div></div>
+        <div class="card"><div class="num">${s.itemCount}</div><div class="lbl">吃過的美食 / 店家</div></div>
+      </div>
+
+      <div class="card">
+        <h2>在家 vs 外食</h2>
+        <p class="hint">地點含「家」的算在家吃</p>
+        <div class="split-bar">
+          <span style="width:${homePct}%;background:var(--home)"></span>
+          <span style="width:${outPct}%;background:var(--out)"></span>
+        </div>
+        <div class="split-legend">
+          <span><i class="dot" style="background:var(--home)"></i>在家 <b>${s.home} 次（${homePct}%）</b></span>
+          <span><i class="dot" style="background:var(--out)"></i>外食 <b>${s.out} 次（${outPct}%）</b></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>最常吃 TOP 5</h2>
+        <p class="hint">同一餐有多樣的，每一樣各算一次</p>
+        ${s.top5.map(([name, n], i) => `
+          <div class="rank-row">
+            <div class="rank-head"><span>${i + 1}. ${esc(name)}</span><b>${n} 次</b></div>
+            <div class="rank-bar"><span style="width:${Math.round(n / maxFood * 100)}%"></span></div>
+          </div>`).join('')}
+      </div>
+
+      <div class="card">
+        <h2>新店 vs 回訪店</h2>
+        <p class="hint">新店：全部紀錄中第一次出現在今年；回訪：之前就吃過，今年又去</p>
+        <div class="compare">
+          <div class="box"><div class="big">${s.newItems.length}</div><div class="small">新店（今年第一次）</div></div>
+          <div class="box"><div class="big">${s.returnedCount}</div><div class="small">回訪（之前吃過）</div></div>
+        </div>
+        ${s.newItems.length ? `<div class="chips">${s.newItems.map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>` : ''}
+      </div>
+
+      <div class="card">
+        <h2>地區統計</h2>
+        <p class="hint">依地點的次數排序</p>
+        ${s.locations.map(([name, n]) => `
+          <div class="rank-row">
+            <div class="rank-head"><span>${esc(name)}</span><b>${n} 次</b></div>
+            <div class="rank-bar"><span style="width:${Math.round(n / maxLoc * 100)}%"></span></div>
+          </div>`).join('')}
+      </div>
+    `;
+  }
+
+  async function loadData() {
+    let base = null;
+    try {
+      const res = await fetch(GAS_URL);
+      const json = await res.json();
+      if (Array.isArray(json)) base = json;
+    } catch (e) {
+      console.warn('GAS fetch failed, falling back to CSV', e);
+    }
+    if (!base) {
+      const res = await fetch(CSV_URL);
+      base = parseCSV(await res.text());
+    }
+
+    let ov = { added: [], edited: {}, deleted: [] };
+    try {
+      const saved = localStorage.getItem(OVERRIDES_KEY);
+      if (saved) ov = { ...ov, ...JSON.parse(saved) };
+    } catch (e) { /* ignore broken or blocked storage */ }
+
+    allRecords = mergeOverrides(base, ov);
+    years = [...new Set(allRecords.map(r => yearOf(r.date)).filter(Boolean))].sort((a, b) => a - b);
+    if (!years.length) {
+      $('content').innerHTML = '<div class="empty">還沒有任何紀錄</div>';
+      $('yearLabel').textContent = '—';
+      return;
+    }
+    currentYear = years[years.length - 1];
+    render();
+  }
+
+  $('prevYear').addEventListener('click', () => {
+    const i = years.indexOf(currentYear);
+    if (i > 0) { currentYear = years[i - 1]; render(); }
+  });
+  $('nextYear').addEventListener('click', () => {
+    const i = years.indexOf(currentYear);
+    if (i < years.length - 1) { currentYear = years[i + 1]; render(); }
+  });
+
+  loadData().catch(err => {
+    console.error(err);
+    $('content').innerHTML = '<div class="status">載入失敗，請稍後再試</div>';
+    $('yearLabel').textContent = '';
+  });
+})();
+</script>
+</body>
+</html>
