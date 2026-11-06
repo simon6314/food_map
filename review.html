@@ -109,6 +109,8 @@
   .compare .box { border-radius: 12px; padding: 12px; background: var(--track); text-align: center; }
   .compare .big { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
   .compare .small { font-size: 0.8rem; color: var(--sub); }
+  .compare .box { cursor: pointer; border: 2px solid transparent; font: inherit; color: var(--text); }
+  .compare .box.active { border-color: var(--primary); }
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
     font-size: 0.82rem; padding: 4px 10px; border-radius: 999px;
@@ -147,6 +149,7 @@
   let allRecords = [];
   let years = [];
   let currentYear = null;
+  let compareMode = 'new'; // 'new' | 'returned'
 
   function parseCSV(text) {
     const rows = [];
@@ -257,7 +260,8 @@
       itemCount: thisYearItems.length,
       home, out, locations, top5,
       newItems: newItems.sort((a, b) => foodCount[b] - foodCount[a]),
-      returnedCount: returnedItems.length
+      returnedCount: returnedItems.length,
+      returnedItems: returnedItems.sort((a, b) => foodCount[b] - foodCount[a])
     };
   }
 
@@ -311,13 +315,15 @@
       </div>
 
       <div class="card">
-        <h2>新店 vs 回訪店</h2>
-        <p class="hint">新店：全部紀錄中第一次出現在今年；回訪：之前就吃過，今年又去</p>
+        <h2>今年第一次吃的美食</h2>
+        <p class="hint">點數字可切換列表。「第一次」指全部紀錄中，第一次出現在今年的美食 / 店家</p>
         <div class="compare">
-          <div class="box"><div class="big">${s.newItems.length}</div><div class="small">新店（今年第一次）</div></div>
-          <div class="box"><div class="big">${s.returnedCount}</div><div class="small">回訪（之前吃過）</div></div>
+          <button class="box ${compareMode === 'new' ? 'active' : ''}" data-mode="new"><div class="big">${s.newItems.length}</div><div class="small">今年第一次吃</div></button>
+          <button class="box ${compareMode === 'returned' ? 'active' : ''}" data-mode="returned"><div class="big">${s.returnedItems.length}</div><div class="small">之前吃過，今年回訪</div></button>
         </div>
-        ${s.newItems.length ? `<div class="chips">${s.newItems.map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>` : ''}
+        ${(compareMode === 'new' ? s.newItems : s.returnedItems).length
+          ? `<div class="chips">${(compareMode === 'new' ? s.newItems : s.returnedItems).map(f => `<span class="chip">${esc(f)}</span>`).join('')}</div>`
+          : '<div class="hint">這一類目前沒有項目</div>'}
       </div>
 
       <div class="card">
@@ -362,6 +368,13 @@
     currentYear = years[years.length - 1];
     render();
   }
+
+  $('content').addEventListener('click', e => {
+    const btn = e.target.closest('.compare .box');
+    if (!btn) return;
+    compareMode = btn.dataset.mode;
+    render();
+  });
 
   $('prevYear').addEventListener('click', () => {
     const i = years.indexOf(currentYear);
